@@ -11,5 +11,5 @@ Write your solution to solution.py and run: bash check_kernel.sh solution.py to 
 for i in $(seq 2 "$ITERS"); do
   FB="$("$HERE/_feedback.sh" "$PWD")"
   "$HERE/../capture/run_tap.sh" -- --model "$MODEL" --continue -p "$FB
-Continue improving toward the goal; re-test with check_kernel.sh if present."
+Continue improving toward the goal.$SELFTEST"
 done

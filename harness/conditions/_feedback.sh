@@ -7,4 +7,6 @@ DIR="$1"
 if [ -x "$DIR/check_kernel.sh" ]; then
   OUT="$("$DIR/check_kernel.sh" "$DIR/solution.py" 2>&1 || true)"
   echo "Previous attempt eval result: $OUT. Improve correctness first, then speedup."
+else
+  echo ""
 fi
