@@ -3,6 +3,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 import harness.capture.collect_tap as ct
 from harness.capture.collect_tap import find_tap_sessions, collect_tap
 
@@ -52,3 +54,10 @@ def test_collect_tap_orchestration(tmp_path: Path, monkeypatch):
     assert out == [run_dir / "tap" / "s1.json"]
     assert (run_dir / "tap" / "s1.json").exists()
     assert calls == ["s1"]
+
+
+def test_find_tap_sessions_rejects_naive_datetime(tmp_path: Path):
+    db = tmp_path / "t.sqlite3"
+    _make_db(db, [("s", "2026-06-19T12:00:00+00:00", "claude")])
+    with pytest.raises(ValueError):
+        find_tap_sessions(db, datetime(2026, 6, 19, 11))  # naive datetime

@@ -15,7 +15,9 @@ def find_tap_sessions(
     until: datetime | None = None,
     client: str = "claude",
 ) -> list[str]:
-    """Return claude-tap session ids whose started_at falls in [since, until], oldest first."""
+    """Return claude-tap session ids whose started_at falls in [since, until], oldest first. since/until must be timezone-aware."""
+    if since.tzinfo is None or (until is not None and until.tzinfo is None):
+        raise ValueError("since/until must be timezone-aware (e.g. datetime.now(timezone.utc))")
     db = Path(db_path).expanduser()
     if not db.exists():
         return []
@@ -54,9 +56,10 @@ def collect_tap(
     until: datetime | None = None,
     db_path: Path = DEFAULT_DB,
     claude_tap_bin: Path = DEFAULT_TAP_BIN,
+    client: str = "claude",
 ) -> list[Path]:
     """Export every tap session in the run's time window into run_dir/tap/."""
-    ids = find_tap_sessions(db_path, since, until)
+    ids = find_tap_sessions(db_path, since, until, client=client)
     dest = Path(run_dir) / "tap"
     dest.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
