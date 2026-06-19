@@ -41,7 +41,7 @@ Rows collected into `data/raw/<run_id>/ttft/` (time-window or per-run file). **H
 
 ## 4. Component B — GPU-kernel coding workload
 
-**Source:** drkernel-lab KernelBench L2 problems (`distill/problems/problems_sample.jsonl`). **Chosen problem:** `76_Gemm_Add_ReLU` (GEMM+bias+ReLU @1024×8192; Triton's strong suit, clean speedup signal). The problem's self-contained `prompt_text` becomes `tasks/coding/prompt.md`; `reference_code` is stored for scoring.
+**Source:** drkernel-lab KernelBench L2 problems (`distill/problems/problems_sample.jsonl`). **Chosen problem (locked):** `76_Gemm_Add_ReLU` (GEMM+bias+ReLU @1024×8192). Rationale for "relatively simple": all L2 problems require a matmul/conv core (none are pure pointwise), and matmul+bias+ReLU is the *canonical Triton example* — materially more tractable for sonnet than the Conv/ConvTranspose variants. Useful experimental property: **correctness should be frequently achievable** (textbook matmul) while **speedup vs the cuBLAS-backed baseline is the hard, discriminating metric** — so both success-rate and performance carry signal. The problem's self-contained `prompt_text` becomes `tasks/coding/prompt.md`; `reference_code` is stored for scoring.
 
 **Self-test tool (agent-facing):** each run's isolated scratch dir contains `check_kernel.sh` and the problem files. The prompt instructs the agent to write its kernel to `solution.py` and run `bash check_kernel.sh solution.py` to compile/test it. `check_kernel.sh` uses the **drkernel310** python to POST `solution.py` + `reference_code` to KernelGYM `:10908/evaluate` and prints `compiled / correctness / decoy / speedup`. This lets `single_agent`/`subagents`/`workflow` iterate within a session.
 
@@ -94,11 +94,11 @@ After the launcher finishes, `runner.execute` additionally:
 - TTFT proxy is the highest-risk build: must stream byte-transparently; gate it behind a functional + fidelity test (real `claude -p` through the full chain works; usage matches; TTFT recorded) before use.
 - The `drkernel310` env is aarch64-native and already built — do **not** pip-restore cross-arch.
 
-## 10. Open parameters (default = keep, flag for the user)
+## 10. Resolved parameters (user-confirmed 2026-06-19)
 
-- **Model:** experiment fixes `claude-sonnet-4-6` (control). Kernel-writing is hard; `opus-4-8` would showcase more but breaks the fixed-model control. **Default: keep sonnet across all conditions**; revisit only if success is uniformly zero.
-- **Reasoning effort:** the drkernel server uses `--effort high/xhigh`. Our launchers don't set effort. **Default: leave effort unset (CC default)**; could pin it as another control.
-- **Problem count:** one fixed problem (`76_Gemm_Add_ReLU`) keeps the comparison controlled; reps capture variance. A small problem set is a later extension.
+- **Model:** `claude-sonnet-4-6` held fixed across **all** conditions (the control). ✅ locked.
+- **Reasoning effort:** **default** (launchers do not set `--effort`). ✅ locked.
+- **Problem:** one fixed, relatively simple problem — `76_Gemm_Add_ReLU` (see §4). ✅ locked. A larger problem set is a later extension; reps capture variance.
 
 ## 11. Out of scope (YAGNI)
 
