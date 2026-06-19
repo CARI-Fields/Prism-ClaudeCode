@@ -46,5 +46,18 @@ def test_collect_copies_into_run_dir(tmp_path: Path):
     _touch(projects / enc / "s.jsonl", 200.0)
     run_dir = tmp_path / "run"
     copied = collect(run_dir, projects, "/work/proj", since=150.0)
-    assert (run_dir / "transcripts" / "s.jsonl").exists()
+    enc = encode_project_dir("/work/proj")
+    assert (run_dir / "transcripts" / enc / "s.jsonl").exists()
     assert len(copied) == 1
+
+
+def test_collect_recurses_and_preserves_subagent_paths(tmp_path: Path):
+    projects = tmp_path / "projects"
+    enc = encode_project_dir("/work/proj")
+    _touch(projects / enc / "sess.jsonl", 200.0)
+    _touch(projects / enc / "sess" / "subagents" / "agent-1.jsonl", 200.0)
+    run_dir = tmp_path / "run"
+    copied = collect(run_dir, projects, "/work/proj", since=150.0)
+    assert (run_dir / "transcripts" / enc / "sess.jsonl").exists()
+    assert (run_dir / "transcripts" / enc / "sess" / "subagents" / "agent-1.jsonl").exists()
+    assert len(copied) == 2

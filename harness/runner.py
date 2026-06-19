@@ -12,6 +12,7 @@ from harness.config import (
 )
 from harness.run_meta import make_run_id, write_run_meta, gather_versions
 from harness.capture.collect_transcripts import collect
+from harness.capture.collect_tap import collect_tap
 from harness.workspace import restore_workspace
 
 
@@ -53,23 +54,28 @@ def execute(plan: RunPlan, exp: ExperimentConfig, *, dry_run: bool = False) -> P
 
     (run_dir / "tap").mkdir(parents=True, exist_ok=True)
     (run_dir / "transcripts").mkdir(parents=True, exist_ok=True)
-    start = _now().timestamp()
+    start_dt = _now()
+    start = start_dt.timestamp()
 
     launcher = Path(plan.condition.launcher).resolve()
     subprocess.run(
         [str(launcher), str(Path(prompt_file).resolve()), str(run_dir.resolve()), plan.model],
         cwd=str(cwd), check=True,
     )
+    end_dt = _now()
 
     transcripts = collect(run_dir, exp.claude_projects, str(Path(cwd).resolve()), since=start)
+    tap_files = collect_tap(run_dir, start_dt, end_dt)
     write_run_meta(run_dir, {
         "run_id": plan.run_id,
         "task": plan.task.name,
         "condition": plan.condition.name,
         "rep": plan.rep,
         "model": plan.model,
-        "started_utc": datetime.fromtimestamp(start, tz=timezone.utc).isoformat(),
+        "started_utc": start_dt.isoformat(),
+        "ended_utc": end_dt.isoformat(),
         "transcripts": [p.name for p in transcripts],
+        "tap": [p.name for p in tap_files],
         "versions": gather_versions(),
     })
     return run_dir
