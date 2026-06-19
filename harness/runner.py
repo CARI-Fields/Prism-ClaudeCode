@@ -74,8 +74,8 @@ def execute(plan: RunPlan, exp: ExperimentConfig, *, dry_run: bool = False) -> P
         "model": plan.model,
         "started_utc": start_dt.isoformat(),
         "ended_utc": end_dt.isoformat(),
-        "transcripts": [p.name for p in transcripts],
-        "tap": [p.name for p in tap_files],
+        "transcripts": [str(p.relative_to(run_dir)) for p in transcripts],
+        "tap": [str(p.relative_to(run_dir)) for p in tap_files],
         "versions": gather_versions(),
     })
     return run_dir

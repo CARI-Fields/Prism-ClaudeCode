@@ -46,7 +46,6 @@ def test_collect_copies_into_run_dir(tmp_path: Path):
     _touch(projects / enc / "s.jsonl", 200.0)
     run_dir = tmp_path / "run"
     copied = collect(run_dir, projects, "/work/proj", since=150.0)
-    enc = encode_project_dir("/work/proj")
     assert (run_dir / "transcripts" / enc / "s.jsonl").exists()
     assert len(copied) == 1
 
