@@ -1,6 +1,9 @@
 # Raw captured data — large; regenerate by re-running the harness
 data/raw/
 
+# Live workspace dirs — regenerated scratch dirs, not tracked
+tasks/*/workspace/
+
 # Keep figures/ and reports/ committed.
 
 # Python
