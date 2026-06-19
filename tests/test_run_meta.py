@@ -16,3 +16,5 @@ def test_write_run_meta_roundtrips(tmp_path: Path):
     out = write_run_meta(tmp_path / "run", meta)
     assert out.name == "run_meta.json"
     assert json.loads(out.read_text())["condition"] == "single_agent"
+    data = json.loads(out.read_text())
+    assert data == meta

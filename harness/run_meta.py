@@ -21,10 +21,11 @@ def write_run_meta(run_dir: Path, meta: dict) -> Path:
 
 def _cmd(args: list[str]) -> str:
     try:
-        return subprocess.run(
-            args, capture_output=True, text=True, timeout=20
-        ).stdout.strip()
-    except Exception as exc:  # tool missing / non-zero — record, don't crash
+        result = subprocess.run(
+            args, capture_output=True, text=True, timeout=20, check=True
+        )
+        return result.stdout.strip()
+    except Exception as exc:  # tool missing / non-zero exit — record, don't crash
         return f"<error: {exc}>"
 
 
