@@ -19,7 +19,6 @@ from harness.capture.collect_ttft import collect_ttft
 from harness.services import ensure_services
 from harness.score.score_research import score_research
 from harness.score.score_coding import score_kernel
-from harness.score.extract import extract_last_code_block
 
 
 @dataclass(frozen=True)
@@ -42,12 +41,15 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def score_run(task: TaskConfig, scratch_dir: Path, exp: ExperimentConfig) -> dict:
+def score_run(task, scratch_dir: Path, exp) -> dict:
     if task.kind == "research":
-        return {"score": score_research(scratch_dir / "report.md", task.required_sections)}
+        report = Path(scratch_dir) / "report.md"
+        if report.exists():
+            return {"score": score_research(report, task.required_sections)}
+        return {"score": {"success": False, "reason": "no report.md"}}
     if task.kind == "coding":
-        sol = scratch_dir / "solution.py"
-        ref = Path("tasks/coding/reference_code.py")
+        sol = Path(scratch_dir) / "solution.py"
+        ref = Path(__file__).resolve().parents[1] / "tasks" / "coding" / "reference_code.py"
         if sol.exists() and ref.exists():
             res = score_kernel(sol.read_text(), ref.read_text(), exp.kernelgym_url)
         else:
@@ -74,6 +76,7 @@ def execute(plan: RunPlan, exp: ExperimentConfig, *, dry_run: bool = False) -> P
 
     ensure_services(exp.kernelgym_url)
     (run_dir / "tap").mkdir(parents=True, exist_ok=True)
+    (run_dir / "transcripts").mkdir(parents=True, exist_ok=True)
 
     start_dt = _now()
     start = start_dt.timestamp()

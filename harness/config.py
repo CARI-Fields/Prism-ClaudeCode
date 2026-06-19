@@ -20,7 +20,7 @@ class ExperimentConfig:
     kernelgym_url: str = "http://127.0.0.1:10908"
     drkernel_python: str = "/home/yubaifeng/e84381970/envs/drkernel310/bin/python3.10"
     ttft_port: int = 8770
-    ttft_log: Path = Path("/tmp/cc-exp-ttft.jsonl")
+    ttft_log: Path = field(default=Path("/tmp/cc-exp-ttft.jsonl"))
 
 
 def load_experiment(path: Path) -> ExperimentConfig:
