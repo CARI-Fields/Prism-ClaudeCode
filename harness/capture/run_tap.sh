@@ -4,7 +4,7 @@
 # per-run traces from there by time window.
 # Usage: run_tap.sh -- <claude args...>
 set -euo pipefail
-[ "${1:-}" = "--" ] && shift
+if [ "${1:-}" = "--" ]; then shift; fi
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TAP="$HERE/../../.venv/bin/claude-tap"
 exec "$TAP" --tap-no-live --tap-no-open -- "$@"
