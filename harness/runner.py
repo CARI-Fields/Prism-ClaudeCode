@@ -103,12 +103,30 @@ def main(argv: list[str] | None = None) -> int:
     exp = load_experiment(Path(args.config))
 
     if args.all:
-        for task_name, cond_name, rep in iter_cells(exp):
+        failures: list[str] = []
+        cells = iter_cells(exp)
+        for task_name, cond_name, rep in cells:
             task = load_task(Path(f"config/tasks/{task_name}.yaml"))
             cond = load_condition(Path(f"config/conditions/{cond_name}.yaml"))
             plan = plan_run(exp, task, cond, rep, _now())
             print(f"=== {plan.run_id} ===")
-            execute(plan, exp, dry_run=args.dry_run)
+            try:
+                execute(plan, exp, dry_run=args.dry_run)
+            except Exception as exc:
+                print(f"!!! FAILED {plan.run_id}: {exc}")
+                failures.append(plan.run_id)
+                if not args.dry_run:
+                    write_run_meta(plan.run_dir, {
+                        "run_id": plan.run_id,
+                        "task": task.name,
+                        "condition": cond.name,
+                        "rep": rep,
+                        "model": plan.model,
+                        "status": "failed",
+                        "error": str(exc),
+                    })
+        if failures:
+            print(f"{len(failures)}/{len(cells)} cell(s) failed: {failures}")
         return 0
 
     task = load_task(Path(f"config/tasks/{args.task}.yaml"))

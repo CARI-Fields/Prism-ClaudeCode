@@ -5,6 +5,8 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+_TAP_BIN = Path(__file__).resolve().parents[1] / ".venv" / "bin" / "claude-tap"
+
 
 def make_run_id(task: str, condition: str, rep: int, ts: datetime) -> str:
     stamp = ts.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -32,6 +34,6 @@ def _cmd(args: list[str]) -> str:
 def gather_versions() -> dict:
     return {
         "claude": _cmd(["claude", "--version"]),
-        "claude_tap": _cmd(["claude-tap", "--version"]),
+        "claude_tap": _cmd([str(_TAP_BIN), "--version"]),
         "git_sha": _cmd(["git", "rev-parse", "HEAD"]),
     }

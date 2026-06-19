@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Usage: loop_dynamic.sh <prompt_file> <run_dir> <model>   (single session, retained context via --continue)
 set -euo pipefail
+# NOTE: --continue resumes the most-recent session for this cwd. Cells MUST run
+# sequentially — never two runs concurrently against the same cwd, or --continue
+# could resume the wrong session.
 PROMPT_FILE="$1"; RUN_DIR="$2"; MODEL="$3"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ITERS="${LOOP_ITERS:-5}"
