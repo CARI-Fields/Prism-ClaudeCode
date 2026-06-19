@@ -7,7 +7,7 @@ setup:
 	$(PY) -m pip install -e ".[dev]"
 
 tap-check:
-	claude-tap --help >/dev/null && echo "claude-tap OK"
+	.venv/bin/claude-tap --help >/dev/null && echo "claude-tap OK"
 
 test:
 	$(PY) -m pytest -q
