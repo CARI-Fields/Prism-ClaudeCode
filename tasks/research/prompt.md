@@ -1,5 +1,14 @@
-Research how prefix / prompt caching works across the Claude (Anthropic), OpenAI,
-and Google Gemini APIs. Cover: how a cache hit is triggered, the cache lifetime
-(TTL), what invalidates the cached prefix, and how each provider reports cache
-usage in API responses. Write a one-page summary to `research_summary.md` with a
-comparison table and at least 4 cited sources (include URLs).
+Write a comprehensive technical report to `report.md` surveying GPU kernel
+optimization for LLM inference (2023–2026). Include these six sections, each
+with at least two cited sources (URLs) and concrete numbers where available,
+plus a comparison table:
+
+1. FlashAttention family (v1 → v3 and variants) — ideas and performance
+2. Quantized GEMM kernels (FP8 / INT8 / INT4) for LLM matmuls
+3. KV-cache / paged-attention kernels (e.g. PagedAttention)
+4. Triton vs CUDA C++ vs CUTLASS / CuTe — productivity and performance tradeoffs
+5. Hardware-specific features (Hopper TMA / wgmma, Blackwell FP4 / FP8, async copy)
+6. Autotuning and compilers (Triton autotune, TVM, torch.compile / Inductor)
+
+Use web search and cite at least 12 distinct source URLs total. Finish only
+after `report.md` contains all six sections, the comparison table, and the citations.
