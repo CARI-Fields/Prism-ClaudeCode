@@ -36,3 +36,20 @@ def test_execute_scores_research_and_writes_meta(tmp_path, monkeypatch):
     meta = json.loads((out / "run_meta.json").read_text())
     assert meta["task"] == "research"
     assert "success" in meta and "ttft" in meta
+
+
+def test_execute_skips_coding_when_kernelgym_down(tmp_path, monkeypatch):
+    exp = _exp(tmp_path)
+    prompt = tmp_path / "prompt.md"; prompt.write_text("write a kernel")
+    task = TaskConfig("coding", prompt, None, None, kind="coding",
+                      required_sections=[], seed_files=[])
+    cond = ConditionConfig("single_agent", tmp_path / "l.sh", "")
+    plan = plan_run(exp, task, cond, 1, datetime(2026, 6, 19, 12, tzinfo=timezone.utc))
+    launched = {}
+    monkeypatch.setattr(R.subprocess, "run", lambda *a, **k: launched.setdefault("ran", True))
+    monkeypatch.setattr(R, "ensure_services", lambda *a, **k: {"kernelgym": False})
+    out = execute(plan, exp, dry_run=False)
+    import json
+    meta = json.loads((out / "run_meta.json").read_text())
+    assert meta["status"] == "skipped" and meta["reason"] == "kernelgym down"
+    assert "ran" not in launched  # launcher/model never invoked

@@ -51,7 +51,10 @@ def score_run(task, scratch_dir: Path, exp) -> dict:
         sol = Path(scratch_dir) / "solution.py"
         ref = Path(__file__).resolve().parents[1] / "tasks" / "coding" / "reference_code.py"
         if sol.exists() and ref.exists():
-            res = score_kernel(sol.read_text(), ref.read_text(), exp.kernelgym_url)
+            try:
+                res = score_kernel(sol.read_text(), ref.read_text(), exp.kernelgym_url)
+            except Exception as exc:
+                res = {"success": None, "reason": f"score error: {exc}"}
         else:
             res = {"success": False, "reason": "no solution.py"}
         return {"score": res}
@@ -74,7 +77,14 @@ def execute(plan: RunPlan, exp: ExperimentConfig, *, dry_run: bool = False) -> P
     for f in plan.task.seed_files:
         shutil.copy2(f, scratch / Path(f).name)
 
-    ensure_services(exp.kernelgym_url)
+    svc = ensure_services(exp.kernelgym_url)
+    if plan.task.kind == "coding" and not svc.get("kernelgym"):
+        write_run_meta(run_dir, {
+            "run_id": plan.run_id, "task": plan.task.name,
+            "condition": plan.condition.name, "rep": plan.rep, "model": plan.model,
+            "status": "skipped", "reason": "kernelgym down", "services": svc,
+        })
+        return run_dir
     (run_dir / "tap").mkdir(parents=True, exist_ok=True)
     (run_dir / "transcripts").mkdir(parents=True, exist_ok=True)
 
@@ -109,6 +119,7 @@ def execute(plan: RunPlan, exp: ExperimentConfig, *, dry_run: bool = False) -> P
         "success": score.get("success"),
         "score": score,
         "versions": gather_versions(),
+        "services": svc,
     })
     return run_dir
 
