@@ -31,22 +31,24 @@ def make_app(upstream: str, out_path: Path) -> Starlette:
 
         async def stream():
             buf = ""
-            async for chunk in upstream_resp.aiter_raw():
-                now = time.time()
-                try:
-                    buf += chunk.decode("utf-8", "ignore")
-                    while "\n" in buf:
-                        line, buf = buf.split("\n", 1)
-                        timer.feed(now, line)
-                except Exception:
-                    pass
-                yield chunk
-            t_done = time.time()
-            await upstream_resp.aclose()
-            row = timer.timing_row(request_id, t_send, t_done)
-            row["status"] = upstream_resp.status_code
-            with out_path.open("a") as f:
-                f.write(json.dumps(row) + "\n")
+            try:
+                async for chunk in upstream_resp.aiter_raw():
+                    now = time.time()
+                    try:
+                        buf += chunk.decode("utf-8", "replace")
+                        while "\n" in buf:
+                            line, buf = buf.split("\n", 1)
+                            timer.feed(now, line)
+                    except Exception:
+                        pass
+                    yield chunk
+                t_done = time.time()
+                row = timer.timing_row(request_id, t_send, t_done)
+                row["status"] = upstream_resp.status_code
+                with out_path.open("a") as f:
+                    f.write(json.dumps(row) + "\n")
+            finally:
+                await upstream_resp.aclose()
 
         resp_headers = {k: v for k, v in upstream_resp.headers.items()
                         if k.lower() not in ("content-length", "content-encoding", "transfer-encoding")}
