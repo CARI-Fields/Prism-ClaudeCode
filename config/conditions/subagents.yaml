@@ -1,0 +1,3 @@
+name: subagents
+launcher: harness/conditions/subagents.sh
+description: Delegates work via the Task tool; isolated subagent contexts.

@@ -1,0 +1,10 @@
+model: claude-sonnet-4-6
+reps: 3
+conditions: [single_agent, subagents, ralph_loop, dynamic_workflow, loop_dynamic]
+tasks: [coding, research]
+paths:
+  data_raw: data/raw
+  claude_projects: ~/.claude/projects
+proxy:
+  host: 127.0.0.1
+  port: 8080

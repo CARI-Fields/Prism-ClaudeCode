@@ -1,0 +1,4 @@
+name: coding
+prompt_file: tasks/coding/prompt.md
+workspace: tasks/coding/workspace
+workspace_seed: tasks/coding/workspace_seed
