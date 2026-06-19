@@ -24,10 +24,11 @@ class SseTimer:
     def timing_row(self, request_id: str, t_send: float, t_done: float) -> dict:
         def rel(x: float | None) -> float | None:
             return None if x is None else x - t_send
+        end = self.t_done if self.t_done is not None else t_done
         return {
             "request_id": request_id,
             "t_send_epoch": t_send,
             "prefill_s": rel(self.t_message_start),
             "ttft_s": rel(self.t_first_text),
-            "total_s": t_done - t_send,
+            "total_s": end - t_send,
         }

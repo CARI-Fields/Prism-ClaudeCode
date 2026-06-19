@@ -23,4 +23,12 @@ def test_timing_row_shape():
     assert row["request_id"] == "req_abc"
     assert row["ttft_s"] == 2.5 - 1.0
     assert row["prefill_s"] == 1.5 - 1.0
-    assert row["total_s"] == 3.6 - 1.0
+    assert row["total_s"] == 3.5 - 1.0
+
+
+def test_timing_row_total_falls_back_to_passed_t_done():
+    t = SseTimer()
+    t.feed(1.0, "event: message_start")
+    # no message_stop fed -> self.t_done is None -> fall back to passed t_done
+    row = t.timing_row("r", t_send=0.5, t_done=4.0)
+    assert row["total_s"] == 4.0 - 0.5
