@@ -2,3 +2,7 @@ name: coding
 prompt_file: tasks/coding/prompt.md
 workspace: tasks/coding/workspace
 workspace_seed: tasks/coding/workspace_seed
+kind: coding
+seed_files:
+  - tasks/coding/check_kernel.sh
+  - tasks/coding/reference_code.py

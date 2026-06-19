@@ -30,6 +30,9 @@ def test_execute_runs_launcher_collects_both_and_writes_meta(tmp_path, monkeypat
     monkeypatch.setattr(R, "collect",
                         lambda *a, **k: [run_dir / "transcripts" / "-enc" / "u" / "subagents" / "agent-1.jsonl"])
     monkeypatch.setattr(R, "collect_tap", lambda rd, since, until: [run_dir / "tap" / "abc.json"])
+    monkeypatch.setattr(R, "collect_ttft", lambda *a, **k: [])
+    monkeypatch.setattr(R, "ensure_services", lambda *a, **k: {})
+    monkeypatch.setattr(R, "score_run", lambda *a, **k: {"score": {"success": True}})
     monkeypatch.setattr(R, "gather_versions", lambda: {"claude": "test"})
 
     out = execute(plan, exp, dry_run=False)
