@@ -1,0 +1,17 @@
+# Raw captured data — large; regenerate by re-running the harness
+data/raw/
+
+# Keep figures/ and reports/ committed.
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+*.egg-info/
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+*.swp
