@@ -1213,3 +1213,45 @@ Plan A's outputs that Plan B consumes (the capture contract):
 Plan B (analysis pipeline → tidy tables → metrics → figures → report) is written
 **after** Task 2 completes, so its parser fixtures and exact JSON field names come
 from real captured data rather than assumptions.
+
+---
+
+## Addendum (2026-06-19): Pilot findings & revised capture layer
+
+The pilot (Task 2, commit `faaf90c`; see `docs/superpowers/pilot-notes.md`) confirmed
+all five condition triggers but found the capture mechanism differs from this plan's
+original (file-based) assumption. Revisions below supersede the earlier capture design.
+
+1. **claude-tap stores traces in SQLite, not files.** v0.1.120 writes to
+   `~/.local/share/claude-tap/traces.sqlite3` (`sessions`: id, started_at, client,
+   record_count; `records`; `record_blobs`). `--tap-output-dir` is a legacy no-op.
+   Verified wrapper: `.venv/bin/claude-tap --tap-no-live --tap-no-open -- <claude args>`.
+   Per-run trace capture is a **post-run extraction** keyed on the run's time window:
+   `claude-tap export --session-id <id> --format json -o <file>`.
+2. **Subagent/workflow transcripts are nested**, not top-level: sidechains at
+   `<encoded>/<uuid>/subagents/agent-*.jsonl`, workflow agents at
+   `<encoded>/<uuid>/subagents/workflows/<wf>/agent-*.jsonl`. `collect_transcripts`
+   must recurse and preserve relative paths.
+3. **Model must be forced.** Plain `claude -p` dispatches the default (opus-4-8);
+   launchers pass `--model claude-sonnet-4-6` to honor the fixed-model control.
+4. **Confirmed:** transcript encoding is `/`→`-` only; proxy fidelity is exact
+   (0 token delta vs JSONL); `loop_dynamic` uses `claude --continue -p` (the `/loop`
+   slash command does not self-pace headlessly); `dynamic_workflow` uses
+   "use a workflow" in the prompt.
+
+### Revised/added tasks
+- **Task 6 (launchers)** — per pilot §Condition commands; each wraps
+  `.venv/bin/claude-tap --tap-no-live --tap-no-open -- --model "$MODEL" -p ...`.
+  Also fix Makefile `tap-check` → `.venv/bin/claude-tap`.
+- **Task 9 (new) — `harness/capture/collect_tap.py`** — `find_tap_sessions(db, since,
+  until)` selects `sessions.id` by `started_at` window; `collect_tap(run_dir, ...)`
+  exports each via the claude-tap CLI into `<run_dir>/tap/<id>.json`. TDD
+  `find_tap_sessions` against a temp SQLite fixture.
+- **Task 10 (new) — recursive transcripts + runner wiring** — `collect_transcripts`
+  recurses (`rglob`) and preserves relative paths under `transcripts/`;
+  `runner.execute` records an end timestamp and calls `collect_tap` for the window.
+
+### Plan B hand-off (revised)
+Plan B parsers read the **claude-tap JSON export** format (not files) and the
+**nested** session/subagent JSONLs. Fixtures: `tests/fixtures/sample_plain/`,
+`tests/fixtures/sample_subagents/` (with `transcripts/subagents/agent-*.jsonl`).
