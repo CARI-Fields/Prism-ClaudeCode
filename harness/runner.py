@@ -75,16 +75,36 @@ def execute(plan: RunPlan, exp: ExperimentConfig, *, dry_run: bool = False) -> P
     return run_dir
 
 
+def iter_cells(exp: ExperimentConfig) -> list[tuple[str, str, int]]:
+    cells: list[tuple[str, str, int]] = []
+    for task in exp.tasks:
+        for condition in exp.conditions:
+            for rep in range(1, exp.reps + 1):
+                cells.append((task, condition, rep))
+    return cells
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--task", required=True)
-    ap.add_argument("--condition", required=True)
-    ap.add_argument("--rep", type=int, required=True)
+    ap.add_argument("--task")
+    ap.add_argument("--condition")
+    ap.add_argument("--rep", type=int)
+    ap.add_argument("--all", action="store_true")
     ap.add_argument("--config", default="config/experiment.yaml")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
     exp = load_experiment(Path(args.config))
+
+    if args.all:
+        for task_name, cond_name, rep in iter_cells(exp):
+            task = load_task(Path(f"config/tasks/{task_name}.yaml"))
+            cond = load_condition(Path(f"config/conditions/{cond_name}.yaml"))
+            plan = plan_run(exp, task, cond, rep, _now())
+            print(f"=== {plan.run_id} ===")
+            execute(plan, exp, dry_run=args.dry_run)
+        return 0
+
     task = load_task(Path(f"config/tasks/{args.task}.yaml"))
     cond = load_condition(Path(f"config/conditions/{args.condition}.yaml"))
     plan = plan_run(exp, task, cond, args.rep, _now())
