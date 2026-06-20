@@ -24,3 +24,26 @@ def test_context_growth_cumulative_by_component():
     out = context_growth(df)
     row = out[(out.request_index == 1) & (out.component == "tools")].iloc[0]
     assert row["cum_est_tokens"] == 110
+
+
+def test_cache_accumulation_resets_per_run():
+    df = pd.DataFrame([
+        {"run_id": "r1", "request_index": 0, "cache_read": 50,
+         "cache_creation_5m": 0, "cache_creation_1h": 50, "input_tokens": 10},
+        {"run_id": "r2", "request_index": 0, "cache_read": 0,
+         "cache_creation_5m": 0, "cache_creation_1h": 20, "input_tokens": 5},
+    ])
+    out = cache_accumulation(df)
+    r2 = out[out.run_id == "r2"].iloc[0]
+    assert r2["cum_cache_read"] == 0        # must not carry over from r1
+    assert r2["cum_cache_creation"] == 20
+
+
+def test_context_growth_resets_per_run():
+    df = pd.DataFrame([
+        {"run_id": "r1", "request_index": 0, "component": "tools", "est_tokens": 100},
+        {"run_id": "r2", "request_index": 0, "component": "tools", "est_tokens": 7},
+    ])
+    out = context_growth(df)
+    r2 = out[(out.run_id == "r2") & (out.component == "tools")].iloc[0]
+    assert r2["cum_est_tokens"] == 7         # not 107
