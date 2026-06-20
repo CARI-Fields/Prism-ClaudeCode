@@ -15,17 +15,20 @@ def generate(raw_dir, processed_dir, figures_dir, report_path) -> Path:
     raw_dir, processed_dir = Path(raw_dir), Path(processed_dir)
     figures_dir, report_path = Path(figures_dir), Path(report_path)
     figures_dir.mkdir(parents=True, exist_ok=True)
-    build_all(raw_dir, processed_dir)
+    counts = build_all(raw_dir, processed_dir)
+    if counts.get("runs", 0) == 0:
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text("# Experiment Report\n\nNo runs found in data/raw.\n")
+        return report_path
     turns = pd.read_parquet(processed_dir / "turns.parquet")
     comps = pd.read_parquet(processed_dir / "components.parquet")
     runs = pd.read_parquet(processed_dir / "runs.parquet")
 
-    figs = {
-        "cache_accumulation.png": plot_cache_accumulation(turns, figures_dir / "cache_accumulation.png"),
-        "context_growth.png": plot_context_growth(comps, figures_dir / "context_growth.png"),
-        "latency.png": plot_latency(turns, figures_dir / "latency.png"),
-        "success_speedup.png": plot_success_speedup(runs, figures_dir / "success_speedup.png"),
-    }
+    plot_cache_accumulation(turns, figures_dir / "cache_accumulation.png")
+    plot_context_growth(comps, figures_dir / "context_growth.png")
+    plot_latency(turns, figures_dir / "latency.png")
+    plot_success_speedup(runs, figures_dir / "success_speedup.png")
+
     cols = [c for c in ("run_id", "task", "condition", "success", "speedup",
                         "num_requests", "total_cache_read", "cache_hit_ratio",
                         "completion_time_s") if c in runs.columns]

@@ -14,7 +14,10 @@ def build_run(run_dir: Path):
     run_dir = Path(run_dir)
     meta = json.loads((run_dir / "run_meta.json").read_text())
     tap_files = sorted((run_dir / "tap").glob("*.json"))
-    tap = json.loads(tap_files[0].read_text()) if tap_files else []
+    tap = []
+    for f in tap_files:
+        tap.extend(json.loads(f.read_text()))
+    tap.sort(key=lambda t: t.get("timestamp") or "")
     turns = join_ttft(tap_turns(tap), load_ttft(run_dir / "ttft" / "ttft.jsonl"))
     comps = tap_components(tap)
     run_id = run_dir.name
@@ -47,6 +50,8 @@ def build_run(run_dir: Path):
 def build_all(raw_dir: Path, out_dir: Path) -> dict:
     raw_dir, out_dir = Path(raw_dir), Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    if not raw_dir.exists():
+        return {"turns": 0, "components": 0, "runs": 0}
     all_turns, all_comps, all_runs = [], [], []
     for d in sorted(raw_dir.iterdir()):
         if not (d / "run_meta.json").exists():
@@ -57,6 +62,8 @@ def build_all(raw_dir: Path, out_dir: Path) -> dict:
             print(f"skip {d.name}: {exc}")
             continue
         all_turns += t; all_comps += c; all_runs.append(r)
+    if not all_runs:
+        return {"turns": 0, "components": 0, "runs": 0}
     pd.DataFrame(all_turns).to_parquet(out_dir / "turns.parquet")
     pd.DataFrame(all_comps).to_parquet(out_dir / "components.parquet")
     pd.DataFrame(all_runs).to_parquet(out_dir / "runs.parquet")
