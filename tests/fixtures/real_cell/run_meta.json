@@ -1,0 +1,95 @@
+{
+  "completion_time_s": 484.984187,
+  "condition": "single_agent",
+  "ended_utc": "2026-06-19T21:08:39.609087+00:00",
+  "model": "claude-sonnet-4-6",
+  "rep": 1,
+  "run_id": "coding__single_agent__01__20260619T210033Z",
+  "score": {
+    "compiled": true,
+    "correctness": false,
+    "decoy_kernel": false,
+    "kernel_runtime_ms": -1.0,
+    "note": "rescored after worker fix",
+    "reference_runtime_ms": -1.0,
+    "speedup": 0.0,
+    "success": false
+  },
+  "services": {
+    "kernelgym": true,
+    "redis": null
+  },
+  "started_utc": "2026-06-19T21:00:34.624900+00:00",
+  "success": false,
+  "tap": [
+    "tap/a494e8ec-842f-444b-a0b7-0596ad826816.json"
+  ],
+  "task": "coding",
+  "transcripts": [
+    "transcripts/-home-yubaifeng-experiments-projects/6b407673-e6f8-4a1c-8a48-cc5a8657582e.jsonl",
+    "transcripts/-home-yubaifeng-experiments-projects-claude-code-data-raw-coding--single-agent--01--20260619T210033Z-workspace/d6bc7dd8-a7e0-4c2c-8a65-bc283bb39ba0.jsonl"
+  ],
+  "ttft": [
+    {
+      "prefill_s": 2.9058735370635986,
+      "request_id": "req_011CcDHtU1FQWRyqXpjE2mqf",
+      "status": 200,
+      "t_send_epoch": 1781902836.1384296,
+      "total_s": 128.40200662612915,
+      "ttft_s": 2.9291350841522217
+    },
+    {
+      "prefill_s": 3.713818073272705,
+      "request_id": "req_011CcDJ3vma2ToZGjjajPiRD",
+      "status": 200,
+      "t_send_epoch": 1781902964.578527,
+      "total_s": 3.9271836280822754,
+      "ttft_s": 3.71403431892395
+    },
+    {
+      "prefill_s": 2.677337408065796,
+      "request_id": "req_011CcDJ4DhoQfTq31Tbhexef",
+      "status": 200,
+      "t_send_epoch": 1781902968.5345504,
+      "total_s": 28.00832724571228,
+      "ttft_s": 2.677433729171753
+    },
+    {
+      "prefill_s": 2.416093349456787,
+      "request_id": "req_011CcDJ6HWZHTMwjJjXXtw7R",
+      "status": 200,
+      "t_send_epoch": 1781902996.5595593,
+      "total_s": 3.322073459625244,
+      "ttft_s": 2.4201104640960693
+    },
+    {
+      "prefill_s": null,
+      "request_id": "req_011CcDJ6Xc8XPgM18KwNA49y",
+      "status": 200,
+      "t_send_epoch": 1781902999.8530324,
+      "total_s": 2.3330752849578857,
+      "ttft_s": null
+    },
+    {
+      "prefill_s": 2.3365042209625244,
+      "request_id": "req_011CcDJUsDD4TGjnqLtaEmUS",
+      "status": 200,
+      "t_send_epoch": 1781903302.6480036,
+      "total_s": 4.080576658248901,
+      "ttft_s": 2.336545944213867
+    },
+    {
+      "prefill_s": 1.7075839042663574,
+      "request_id": "req_011CcDJV9ms4yWvKzigifQg7",
+      "status": 200,
+      "t_send_epoch": 1781903306.7531865,
+      "total_s": 7.702620506286621,
+      "ttft_s": 1.7076747417449951
+    }
+  ],
+  "versions": {
+    "claude": "2.1.183 (Claude Code)",
+    "claude_tap": "claude-tap 0.1.120",
+    "git_sha": "56743fa26d1bf9af53f188d3e5ef07bf82040631"
+  }
+}

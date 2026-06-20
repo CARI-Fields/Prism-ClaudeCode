@@ -1,0 +1,7 @@
+{"request_id": "req_011CcDHtU1FQWRyqXpjE2mqf", "t_send_epoch": 1781902836.1384296, "prefill_s": 2.9058735370635986, "ttft_s": 2.9291350841522217, "total_s": 128.40200662612915, "status": 200}
+{"request_id": "req_011CcDJ3vma2ToZGjjajPiRD", "t_send_epoch": 1781902964.578527, "prefill_s": 3.713818073272705, "ttft_s": 3.71403431892395, "total_s": 3.9271836280822754, "status": 200}
+{"request_id": "req_011CcDJ4DhoQfTq31Tbhexef", "t_send_epoch": 1781902968.5345504, "prefill_s": 2.677337408065796, "ttft_s": 2.677433729171753, "total_s": 28.00832724571228, "status": 200}
+{"request_id": "req_011CcDJ6HWZHTMwjJjXXtw7R", "t_send_epoch": 1781902996.5595593, "prefill_s": 2.416093349456787, "ttft_s": 2.4201104640960693, "total_s": 3.322073459625244, "status": 200}
+{"request_id": "req_011CcDJ6Xc8XPgM18KwNA49y", "t_send_epoch": 1781902999.8530324, "prefill_s": null, "ttft_s": null, "total_s": 2.3330752849578857, "status": 200}
+{"request_id": "req_011CcDJUsDD4TGjnqLtaEmUS", "t_send_epoch": 1781903302.6480036, "prefill_s": 2.3365042209625244, "ttft_s": 2.336545944213867, "total_s": 4.080576658248901, "status": 200}
+{"request_id": "req_011CcDJV9ms4yWvKzigifQg7", "t_send_epoch": 1781903306.7531865, "prefill_s": 1.7075839042663574, "ttft_s": 1.7076747417449951, "total_s": 7.702620506286621, "status": 200}
