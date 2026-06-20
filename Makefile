@@ -1,5 +1,5 @@
 # Run all targets from the repo root.
-.PHONY: setup tap-check run run-all dry-all clean test ttft-up services-up
+.PHONY: setup tap-check run run-all dry-all clean test ttft-up services-up analyze
 PY ?= .venv/bin/python
 
 setup:
@@ -32,3 +32,6 @@ services-up:
 	sg docker -c "docker stop qwen" || true
 	bash /home/yubaifeng/e84381970/drkernel-lab/sandbox/gpu-kernelgym/start_gpu_newstd.sh &
 	$(MAKE) ttft-up
+
+analyze:
+	$(PY) -c "from analysis.report import generate; print(generate('data/raw','data/processed','figures','reports/report.md'))"
