@@ -5,7 +5,11 @@ from pathlib import Path
 
 def run_summary(meta: dict, run_dir: Path) -> dict:
     score = meta.get("score") or {}
-    subs = list((Path(run_dir) / "transcripts").rglob("subagents/*.jsonl"))
+    transcript_dir = Path(run_dir) / "transcripts"
+    subs = [
+        path for path in transcript_dir.rglob("agent*.jsonl")
+        if "subagents" in path.parts
+    ]
     return {
         "task": meta.get("task"),
         "condition": meta.get("condition"),

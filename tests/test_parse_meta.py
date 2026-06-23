@@ -20,3 +20,15 @@ def test_run_summary_counts_subagents(tmp_path):
     (sub / "agent-2.jsonl").write_text("{}")
     s = run_summary(meta, tmp_path)
     assert s["num_subagents"] == 2
+
+
+def test_run_summary_counts_workflow_subagents(tmp_path):
+    meta = {"task": "research", "condition": "dynamic_workflow", "rep": 1, "model": "m",
+            "success": True, "score": {"correctness": True, "speedup": None}}
+    workflow = tmp_path / "transcripts" / "u" / "session" / "subagents" / "workflows" / "wf_1"
+    workflow.mkdir(parents=True)
+    (workflow / "agent-a.jsonl").write_text("{}")
+    (workflow / "agent-b.jsonl").write_text("{}")
+    (workflow / "journal.jsonl").write_text("{}")
+    s = run_summary(meta, tmp_path)
+    assert s["num_subagents"] == 2

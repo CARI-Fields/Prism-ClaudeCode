@@ -6,7 +6,8 @@ def test_load_experiment():
     assert exp.model == "claude-sonnet-4-6"
     assert exp.reps == 3
     assert exp.conditions == [
-        "single_agent", "subagents", "ralph_loop", "dynamic_workflow", "loop_dynamic"
+        "single_agent", "goal", "subagents", "ralph_loop",
+        "dynamic_workflow", "loop_dynamic"
     ]
     assert exp.tasks == ["coding", "research"]
     assert exp.proxy_port == 8080
@@ -22,3 +23,9 @@ def test_load_condition():
     c = load_condition(Path("config/conditions/subagents.yaml"))
     assert c.name == "subagents"
     assert c.launcher == Path("harness/conditions/subagents.sh")
+
+
+def test_load_goal_condition():
+    c = load_condition(Path("config/conditions/goal.yaml"))
+    assert c.name == "goal"
+    assert c.launcher == Path("harness/conditions/goal.sh")

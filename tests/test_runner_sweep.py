@@ -7,15 +7,17 @@ import harness.runner as R
 def test_iter_cells_full_factorial():
     exp = ExperimentConfig(
         model="claude-sonnet-4-6", reps=3,
-        conditions=["single_agent", "subagents", "ralph_loop",
+        conditions=["single_agent", "goal", "subagents", "ralph_loop",
                     "dynamic_workflow", "loop_dynamic"],
         tasks=["coding", "research"],
         data_raw=Path("data/raw"), claude_projects=Path("~/.claude/projects"),
         proxy_host="127.0.0.1", proxy_port=8080,
     )
     cells = iter_cells(exp)
-    assert len(cells) == 30
+    assert len(cells) == 36
     assert ("coding", "single_agent", 1) in cells
+    assert ("coding", "goal", 1) in cells
+    assert ("research", "goal", 3) in cells
     assert ("research", "loop_dynamic", 3) in cells
     # reps are 1-indexed
     assert min(r for _, _, r in cells) == 1

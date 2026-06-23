@@ -5,7 +5,7 @@ turns whatever you've captured into figures + a report.
 
 A **cell** = one `(task, condition, rep)`:
 - `task` ∈ `coding | research`
-- `condition` ∈ `single_agent | subagents | ralph_loop | dynamic_workflow | loop_dynamic`
+- `condition` ∈ `single_agent | goal | subagents | ralph_loop | dynamic_workflow | loop_dynamic`
 - `rep` = integer (use `1`–`3` for the full design → 5×2×3 = 30 cells)
 
 All commands run from the repo root. The harness uses the project venv (`.venv/bin/python`);
