@@ -16,6 +16,30 @@ def test_cache_accumulation_cumsum_and_ratio():
     assert abs(out.iloc[1]["cum_hit_ratio"] - 90 / 210) < 1e-9
 
 
+def test_cache_accumulation_adjusts_warm_start_by_request_type():
+    df = pd.DataFrame([
+        {"run_id": "r", "request_index": 0, "request_type": "main-agent",
+         "cache_read": 100, "cache_creation_5m": 50, "cache_creation_1h": 0,
+         "input_tokens": 10},
+        {"run_id": "r", "request_index": 1, "request_type": "main-agent",
+         "cache_read": 150, "cache_creation_5m": 10, "cache_creation_1h": 0,
+         "input_tokens": 10},
+        {"run_id": "r", "request_index": 2, "request_type": "workflow-subagent",
+         "cache_read": 20, "cache_creation_5m": 30, "cache_creation_1h": 0,
+         "input_tokens": 5},
+    ])
+
+    out = cache_accumulation(df).sort_values("request_index")
+
+    assert list(out["warm_start_cache_read"]) == [100, 100, 20]
+    assert list(out["run_local_cache_read"]) == [0, 50, 0]
+    assert list(out["cum_cache_read"]) == [100, 250, 270]
+    assert list(out["cum_run_local_cache_read"]) == [0, 50, 50]
+    assert out.iloc[0]["cum_hit_ratio"] == 0
+    assert out.iloc[0]["observed_cum_hit_ratio"] == 100 / 160
+    assert out.iloc[2]["cum_hit_ratio"] == 50 / 165
+
+
 def test_context_growth_cumulative_by_component():
     df = pd.DataFrame([
         {"run_id": "r", "request_index": 0, "component": "tools", "est_tokens": 50},

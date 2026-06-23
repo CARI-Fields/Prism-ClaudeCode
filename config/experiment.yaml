@@ -1,6 +1,6 @@
 model: claude-sonnet-4-6
 reps: 3
-conditions: [single_agent, subagents, ralph_loop, dynamic_workflow, loop_dynamic]
+conditions: [single_agent, goal, subagents, ralph_loop, dynamic_workflow, loop_dynamic]
 tasks: [coding, research]
 paths:
   data_raw: data/raw
