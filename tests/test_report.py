@@ -149,7 +149,7 @@ def test_echarts_dashboard_data_includes_accumulated_cache_hit_rate():
     assert rows[1]["request_type"] == "main-agent"
 
 
-def test_echarts_cache_timeline_adjusts_warm_start_cache_by_request_type():
+def test_echarts_cache_timeline_counts_warm_cache_as_observed():
     runs = pd.DataFrame([{
         "run_id": "coding__dynamic_workflow__01",
         "task": "coding",
@@ -202,14 +202,12 @@ def test_echarts_cache_timeline_adjusts_warm_start_cache_by_request_type():
     data = build_dashboard_data(runs, turns, pd.DataFrame())
     rows = data["cache_timeline"]
 
-    assert rows[0]["warm_start_cache_read"] == 100
-    assert rows[0]["run_local_cache_read"] == 0
-    assert rows[0]["accumulated_cache_hit_rate"] == 0
-    assert rows[0]["observed_accumulated_cache_hit_rate"] == 100 / 160
-    assert rows[1]["run_local_cache_read"] == 50
-    assert math.isclose(rows[1]["accumulated_cache_hit_rate"], 50 / 130)
-    assert rows[2]["warm_start_cache_read"] == 20
-    assert rows[2]["run_local_cache_read"] == 0
+    # No warm-start subtraction: every reported cache read is counted as-observed.
+    assert rows[0]["accumulated_cache_hit_rate"] == 100 / 160
+    assert rows[0]["cum_cache_read"] == 100
+    assert math.isclose(rows[1]["accumulated_cache_hit_rate"], 250 / 330)
+    assert rows[2]["cum_cache_read"] == 270
+    assert math.isclose(rows[2]["accumulated_cache_hit_rate"], 270 / 385)
 
 
 def test_echarts_dashboard_data_includes_fine_grained_context_token_components():

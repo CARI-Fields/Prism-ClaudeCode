@@ -14,8 +14,8 @@ def plot_cache_accumulation(turns: pd.DataFrame, out_path: Path) -> Path:
     meta = turns.groupby("run_id")[["condition", "task"]].first()
     acc = acc.merge(meta, on="run_id", how="left", suffixes=("", "_m"))
     task = acc["task"].dropna().iloc[0] if "task" in acc and acc["task"].notna().any() else ""
-    fig, ax = new_fig(f"Run-local prefix-cache-hit accumulation ({task})",
-                      "request index", "run-local cache hit rate (%)")
+    fig, ax = new_fig(f"Prefix-cache-hit accumulation ({task})",
+                      "request index", "cache hit rate (%)")
     for cond, g in acc.groupby("condition"):
         curve = g.groupby("request_index")["cum_hit_ratio"].mean() * 100
         ax.plot(curve.index + 1, curve.values, marker="o", label=str(cond))

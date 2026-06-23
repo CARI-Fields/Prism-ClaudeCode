@@ -45,8 +45,8 @@ def generate(raw_dir, processed_dir, figures_dir, report_path) -> Path:
     cols = [c for c in ("run_id", "task", "condition", "success", "speedup",
                         "research_rubric_score", "quality_score",
                         "total_cost_usd", "cost_efficiency_score",
-                        "num_requests", "total_cache_read", "total_run_local_cache_read",
-                        "cache_hit_ratio", "observed_cache_hit_ratio",
+                        "num_requests", "total_cache_read",
+                        "cache_hit_ratio",
                         "completion_time_s") if c in runs.columns]
     table_md = _markdown_table(runs, cols)
 
@@ -86,7 +86,7 @@ def generate(raw_dir, processed_dir, figures_dir, report_path) -> Path:
         "- Condition comparison: switchable aggregate metrics for success, latency, requests, cost, quality, cache, and token pressure.",
         "- Condition overhead vs single-agent baseline: normalized feature cost for subagents, loops, dynamic workflow, and loop+dynamic.",
         "- Quality vs cost map: coding speedup or research rubric score against estimated API-equivalent dollar cost.",
-        "- Prefix Cache Hit Rate (accumulated): run-local cache-hit rate adjusted for warm cache already present on the first request of each request type; tooltips also show the observed/global rate.",
+        "- Prefix Cache Hit Rate (accumulated): cache-hit rate over the raw, as-observed token counts, counting every reported cache read including the warm cache inherited from a shared system-prompt prefix.",
         "- TTFT vs prompt tokens: latency scaling as prompt/context grows.",
         "- Per-run request cost timeline: selected-run request sequence with input/cache-read/cache-write/output tokens, estimated request cost, and TTFT/total latency.",
         "- Context source breakdown: estimated per-request context composition by source, including system prompt, tools, MCP/extensions, CLAUDE.md/project instructions, skills, memory, hooks, user input, conversation history, tool results, and subagent summaries.",

@@ -2,6 +2,22 @@ import json, shutil
 from pathlib import Path
 import pandas as pd
 from analysis.build_tables import build_run, build_all, cache_summary
+from analysis.parse.parse_tap import drop_empty_turns, tap_turns
+
+
+def test_drop_empty_turns_removes_aborted_responses_and_reindexes():
+    tap = [
+        {"response": {"usage": {}, "content": [], "stop_reason": None}},          # aborted
+        {"response": {"usage": {"input_tokens": 5, "cache_read_input_tokens": 100}}},
+        {"response": {}},                                                          # no usage at all
+        {"response": {"usage": {"input_tokens": 7, "cache_read_input_tokens": 200}}},
+    ]
+    kept = drop_empty_turns(tap)
+    assert len(kept) == 2
+    rows = tap_turns(kept)
+    # request_index is contiguous over the real requests only
+    assert [r["request_index"] for r in rows] == [0, 1]
+    assert [r["cache_read"] for r in rows] == [100, 200]
 
 
 def _make_run(tmp):
@@ -20,15 +36,13 @@ def test_build_run(tmp_path):
     assert run["num_requests"] == len(turns)
     assert run["total_cache_read"] == sum(t["cache_read"] for t in turns)
     assert 0.0 <= run["cache_hit_ratio"] <= 1.0
-    assert "observed_cache_hit_ratio" in run
-    assert "total_run_local_cache_read" in run
     assert "total_cost_usd" in run
     assert all("total_cost_usd" in turn for turn in turns)
     assert run["quality_score"] == 0.0
     assert comp_texts and all({"component", "text", "stable"} <= set(x) for x in comp_texts)
 
 
-def test_cache_summary_adjusts_warm_start_cache_by_request_type():
+def test_cache_summary_counts_warm_cache_as_observed():
     summary = cache_summary([
         {
             "request_index": 0,
@@ -57,9 +71,8 @@ def test_cache_summary_adjusts_warm_start_cache_by_request_type():
     ])
 
     assert summary["total_cache_read"] == 270
-    assert summary["total_run_local_cache_read"] == 50
-    assert summary["observed_cache_hit_ratio"] == 270 / 385
-    assert summary["cache_hit_ratio"] == 50 / 165
+    # observed rate over raw counts: 270 read / (25 input + 270 read + 90 write)
+    assert summary["cache_hit_ratio"] == 270 / 385
 
 
 def test_build_all_writes_parquet(tmp_path):

@@ -27,6 +27,13 @@ def test_loop_launchers_default_to_lightweight_iteration_budget():
     loop_dynamic = Path("harness/conditions/loop_dynamic.sh").read_text()
 
     assert 'ITERS="${RALPH_ITERS:-2}"' in ralph
+    assert 'RALPH_PLUGIN_DIR="${RALPH_PLUGIN_DIR:-$HOME/.claude/plugins/cache/claude-plugins-official/ralph-loop/1.0.0}"' in ralph
+    assert "--plugin-dir" in ralph
+    assert "/ralph-loop" in ralph
+    assert "--max-iterations" in ralph
+    assert "--completion-promise" in ralph
+    assert "_feedback.sh" not in ralph
+    assert "for i in" not in ralph
     assert 'ITERS="${LOOP_ITERS:-2}"' in loop_dynamic
     assert "final lightweight continuation step" in loop_dynamic
     assert "make at most one small targeted speed tweak" in loop_dynamic

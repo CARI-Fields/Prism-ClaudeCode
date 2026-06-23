@@ -16,7 +16,9 @@ def test_cache_accumulation_cumsum_and_ratio():
     assert abs(out.iloc[1]["cum_hit_ratio"] - 90 / 210) < 1e-9
 
 
-def test_cache_accumulation_adjusts_warm_start_by_request_type():
+def test_cache_accumulation_counts_warm_cache_as_observed():
+    # The warm cache inherited from a shared system-prompt prefix is a real hit and
+    # is counted as-observed; no warm-start baseline is subtracted.
     df = pd.DataFrame([
         {"run_id": "r", "request_index": 0, "request_type": "main-agent",
          "cache_read": 100, "cache_creation_5m": 50, "cache_creation_1h": 0,
@@ -31,13 +33,9 @@ def test_cache_accumulation_adjusts_warm_start_by_request_type():
 
     out = cache_accumulation(df).sort_values("request_index")
 
-    assert list(out["warm_start_cache_read"]) == [100, 100, 20]
-    assert list(out["run_local_cache_read"]) == [0, 50, 0]
     assert list(out["cum_cache_read"]) == [100, 250, 270]
-    assert list(out["cum_run_local_cache_read"]) == [0, 50, 50]
-    assert out.iloc[0]["cum_hit_ratio"] == 0
-    assert out.iloc[0]["observed_cum_hit_ratio"] == 100 / 160
-    assert out.iloc[2]["cum_hit_ratio"] == 50 / 165
+    assert out.iloc[0]["cum_hit_ratio"] == 100 / 160
+    assert out.iloc[2]["cum_hit_ratio"] == 270 / 385
 
 
 def test_context_growth_cumulative_by_component():
