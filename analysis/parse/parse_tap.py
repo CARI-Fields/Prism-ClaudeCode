@@ -25,6 +25,21 @@ def _usage(turn: dict) -> dict:
     return (turn.get("response") or {}).get("usage") or {}
 
 
+def has_response_usage(turn: dict) -> bool:
+    """A real, completed model request reports token usage. Aborted / cancelled /
+    empty responses are still captured but come back with an empty usage block
+    (``response.usage == {}``, ``content == []``, ``stop_reason == null``) and carry
+    no tokens."""
+    return bool(_usage(turn))
+
+
+def drop_empty_turns(tap: list) -> list:
+    """Remove captured turns that have no usage — aborted or non-responses. They
+    contribute zero tokens of read/write/input and would otherwise inflate request
+    counts and pad every per-request curve with leading flat-zero points."""
+    return [turn for turn in tap if has_response_usage(turn)]
+
+
 def _request_type(turn: dict) -> str:
     system_text = "\n".join(_text_from_content(item) for item in turn.get("system") or [])
     system_lower = system_text.lower()

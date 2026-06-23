@@ -256,56 +256,35 @@ def _cache_timeline_records(turns: list[dict[str, Any]]) -> list[dict[str, Any]]
         cum_read = 0.0
         cum_write = 0.0
         cum_input = 0.0
-        cum_run_local_read = 0.0
-        cum_run_local_write = 0.0
-        cum_run_local_input = 0.0
-        warm_start_by_type: dict[str, float] = {}
         for turn in sorted(run_turns, key=lambda row: row.get("request_index") or 0):
-            read = float(turn.get("cache_read") or 0)
-            write = float(turn.get("cache_creation") or 0)
-            input_tokens = float(turn.get("input_tokens") or 0)
-            request_type = str(turn.get("request_type") or "main-agent")
-            if request_type not in warm_start_by_type:
-                warm_start_by_type[request_type] = read
-            warm_start_read = warm_start_by_type[request_type]
-            run_local_read = max(0.0, read - warm_start_read)
-            cum_read += read
-            cum_write += write
-            cum_input += input_tokens
+            cum_read += float(turn.get("cache_read") or 0)
+            cum_write += float(turn.get("cache_creation") or 0)
+            cum_input += float(turn.get("input_tokens") or 0)
             denom = cum_read + cum_write + cum_input
-            cum_run_local_read += run_local_read
-            cum_run_local_write += write
-            cum_run_local_input += input_tokens
-            run_local_denom = cum_run_local_read + cum_run_local_write + cum_run_local_input
             rows.append({
                 "run_id": run_id,
                 "task": turn.get("task"),
                 "condition": turn.get("condition"),
                 "rep": turn.get("rep"),
                 "request_index": turn.get("request_index"),
-                "request_type": request_type,
-                "warm_start_cache_read": _clean(warm_start_read),
-                "run_local_cache_read": _clean(run_local_read),
+                "request_type": str(turn.get("request_type") or "main-agent"),
                 "cum_cache_read": _clean(cum_read),
                 "cum_cache_write": _clean(cum_write),
                 "cum_input_tokens": _clean(cum_input),
                 "cum_total_context_tokens": _clean(denom),
-                "cum_run_local_cache_read": _clean(cum_run_local_read),
-                "cum_run_local_context_tokens": _clean(run_local_denom),
-                "observed_accumulated_cache_hit_rate": _clean(cum_read / denom if denom else None),
-                "accumulated_cache_hit_rate": _clean(
-                    cum_run_local_read / run_local_denom if run_local_denom else None
-                ),
+                "accumulated_cache_hit_rate": _clean(cum_read / denom if denom else None),
             })
     return rows
 
 
 def _cache_agent_timeline_records(turns: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Per-(run, request_type) accumulated run-local cache-hit-rate curve.
+    """Per-(run, request_type) accumulated prefix-cache-hit-rate curve.
 
-    Each agent-type stream gets its own warm-start baseline (first request of that
-    type), its own within-stream ordinal (1..n), and its own cumulative run-local
-    hit rate. The renderer averages these across reps per (condition, request_type).
+    Each agent-type stream gets its own within-stream ordinal (1..n) and its own
+    cumulative hit rate over the raw, as-observed token counts — every reported
+    cache read is counted, including the warm cache inherited from a shared
+    system-prompt prefix. The renderer averages these across reps per
+    (condition, request_type).
     """
     rows = []
     by_key: dict[tuple[str, str], list[dict[str, Any]]] = {}
@@ -317,22 +296,15 @@ def _cache_agent_timeline_records(turns: list[dict[str, Any]]) -> list[dict[str,
         by_key.setdefault((str(run_id), request_type), []).append(turn)
 
     for (run_id, request_type), group in by_key.items():
-        warm_start: float | None = None
-        cum_run_local_read = 0.0
+        cum_read = 0.0
         cum_write = 0.0
         cum_input = 0.0
         ordinal = 0
         for turn in sorted(group, key=lambda row: row.get("request_index") or 0):
-            read = float(turn.get("cache_read") or 0)
-            write = float(turn.get("cache_creation") or 0)
-            input_tokens = float(turn.get("input_tokens") or 0)
-            if warm_start is None:
-                warm_start = read
-            run_local_read = max(0.0, read - warm_start)
-            cum_run_local_read += run_local_read
-            cum_write += write
-            cum_input += input_tokens
-            denom = cum_run_local_read + cum_write + cum_input
+            cum_read += float(turn.get("cache_read") or 0)
+            cum_write += float(turn.get("cache_creation") or 0)
+            cum_input += float(turn.get("input_tokens") or 0)
+            denom = cum_read + cum_write + cum_input
             ordinal += 1
             rows.append({
                 "run_id": run_id,
@@ -343,10 +315,10 @@ def _cache_agent_timeline_records(turns: list[dict[str, Any]]) -> list[dict[str,
                 "request_index": turn.get("request_index"),
                 "ordinal": ordinal,
                 "accumulated_cache_hit_rate": _clean(
-                    cum_run_local_read / denom if denom else None
+                    cum_read / denom if denom else None
                 ),
-                "cum_run_local_cache_read": _clean(cum_run_local_read),
-                "cum_run_local_context_tokens": _clean(denom),
+                "cum_cache_read": _clean(cum_read),
+                "cum_context_tokens": _clean(denom),
             })
     return rows
 
@@ -652,8 +624,11 @@ _HTML_TEMPLATE = """<!doctype html>
               <select id="cache-agent-filter"></select>
             </label>
           </div>
-          <div id="cache-chart" class="chart tall"></div>
-          <p class="note">Accumulated run-local hit rate, one line per run (not averaged). Color = condition; line style = rep (solid r1, dashed r2, dotted r3). The legend has one entry per condition — toggling it shows/hides all runs of that condition. Pick an agent type above to scope every run to that stream. The run-local rate strips the warm cache inherited on the first request of each agent-type stream. Use the Task filter to isolate coding or research.</p>
+          <h3 style="margin:8px 0 2px;font-size:12.5px;font-weight:600;color:var(--muted);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;">coding</h3>
+          <div id="cache-chart-coding" class="chart tall"></div>
+          <h3 style="margin:14px 0 2px;font-size:12.5px;font-weight:600;color:var(--muted);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;">research</h3>
+          <div id="cache-chart-research" class="chart tall"></div>
+          <p class="note">Accumulated prefix-cache hit rate, one line per run (not averaged) — coding and research are shown in separate panels (both always visible, independent of the Task filter above). Color = condition; line style = rep (solid r1, dashed r2, dotted r3); marker shape = agent type (main-agent ● circle, each subagent type its own shape, security-monitor ◆ diamond). The legend has one entry per condition — toggling it shows/hides all runs of that condition. Pick an agent type above to scope every run to that stream. Hover any point for the run id, agent type, request index, and cumulative cache read. The rate is computed from the raw, as-observed token counts: every reported cache read is counted, including the warm cache inherited from a shared system-prompt prefix. Note: <code>web-search-subagent</code> / <code>web-fetch-subagent</code> are server-side tool calls that carry no prefix cache (read = write = 0), so they sit flat at 0%; a genuine spawned subagent also starts at 0% on its first request (a cold cache write) and only climbs once it reads that prefix back.</p>
         </article>
         <article class="panel">
           <div class="panel-head"><h2>Prefix cache hit rate vs context length</h2>
@@ -662,7 +637,7 @@ _HTML_TEMPLATE = """<!doctype html>
             </label>
           </div>
           <div id="latency-chart" class="chart"></div>
-          <p class="note">One dot per request of the selected agent type across every run of this task. X = that request's context length (prompt tokens); Y = that request's own prefix cache hit rate (cache read ÷ context length). Dot encodes agent type: main-agent large, subagents small, security-monitor hollow. Color = condition.</p>
+          <p class="note">One dot per request of the selected agent type across every run of this task. X = that request's context length (prompt tokens); Y = that request's own prefix cache hit rate (cache read ÷ context length). Marker shape encodes agent type: main-agent = small circle; each subagent type = its own shape (workflow ▲ triangle, task ■ square, web-search ★ star, web-fetch arrow, internal rounded square); security-monitor = hollow diamond. Color = condition.</p>
         </article>
       </div>
     </section>
@@ -730,7 +705,7 @@ _HTML_TEMPLATE = """<!doctype html>
       "security-monitor": "diamond",
       "workflow-subagent": "triangle",
       "task-subagent": "rect",
-      "web-search-subagent": "pin",
+      "web-search-subagent": "path://M50,5 L60.6,35.4 L92.8,36.1 L67.1,55.6 L76.4,86.4 L50,68 L23.6,86.4 L32.9,55.6 L7.2,36.1 L39.4,35.4 Z",  // star
       "web-fetch-subagent": "arrow",
       "subagent-internal": "roundRect",
     };
@@ -788,9 +763,9 @@ _HTML_TEMPLATE = """<!doctype html>
     function requestTypeLabel(type) { return requestTypeLabels[type] || type || "main-agent"; }
     function agentDotSpec(type) {
       const t = type || "main-agent";
-      if (t === "security-monitor") return { size: 7, hollow: true };    // same size as subagents, hollow
-      if (t === "main-agent") return { size: 10, hollow: false };        // a bit larger
-      return { size: 7, hollow: false };                                 // subagents
+      if (t === "main-agent") return { size: 6, hollow: false };         // solid circle
+      if (t === "security-monitor") return { size: 7, hollow: true };    // hollow diamond
+      return { size: 8, hollow: false };                                 // subagents — own shape
     }
     function requestAxisLabel(row) { return `#${requestNumber(row.request_index)}\\n${requestTypeLabel(row.request_type)}`; }
     function prettyDate(iso) { if (!iso) return ""; return String(iso).replace("T", " ").slice(0, 16) + " UTC"; }
@@ -815,7 +790,7 @@ _HTML_TEMPLATE = """<!doctype html>
     }
 
     function initCharts() {
-      for (const id of ["matrix-chart", "condition-chart", "overhead-chart", "efficiency-chart", "cache-chart", "latency-chart", "run-chart", "component-chart"]) {
+      for (const id of ["matrix-chart", "condition-chart", "overhead-chart", "efficiency-chart", "cache-chart-coding", "cache-chart-research", "latency-chart", "run-chart", "component-chart"]) {
         charts[id] = echarts.init(document.getElementById(id));
       }
       window.addEventListener("resize", () => Object.values(charts).forEach(chart => chart.resize()));
@@ -991,17 +966,23 @@ _HTML_TEMPLATE = """<!doctype html>
     }
 
     function renderCacheChart() {
-      const task = taskFilter();
+      // coding and research are shown in separate panels, always both visible and
+      // independent of the global Task filter.
+      renderCacheChartFor("coding", "cache-chart-coding");
+      renderCacheChartFor("research", "cache-chart-research");
+    }
+
+    function renderCacheChartFor(task, elId) {
       const at = document.getElementById("cache-agent-filter").value || "main-agent";
       const rows = EXPERIMENT_DATA.cache_by_agent.filter(r =>
-        (task === "all" || r.task === task) && (at === "all" || (r.request_type || "main-agent") === at));
-      // one line per run (and per agent type when showing all) — no averaging across reps
+        r.task === task && (at === "all" || (r.request_type || "main-agent") === at));
+      // one line per (run, agent type) — no averaging across reps
       const groups = new Map();
       for (const r of rows) {
         const type = r.request_type || "main-agent";
         const key = `${r.run_id}|${type}`;
-        if (!groups.has(key)) groups.set(key, { task: r.task, condition: r.condition, rep: r.rep, type, points: [] });
-        groups.get(key).points.push([r.ordinal, (r.accumulated_cache_hit_rate || 0) * 100]);
+        if (!groups.has(key)) groups.set(key, { run_id: r.run_id, condition: r.condition, rep: r.rep, type, points: [] });
+        groups.get(key).points.push(r);
       }
       const condOrder = new Map(EXPERIMENT_DATA.conditions.map((c, i) => [c, i]));
       const series = [...groups.values()]
@@ -1009,34 +990,58 @@ _HTML_TEMPLATE = """<!doctype html>
         .map(g => {
           const color = conditionColors[g.condition] || palette[0];
           let runLabel = `${g.condition} r${g.rep}`;
-          if (task === "all") runLabel = `${g.task} · ${runLabel}`;
           if (at === "all") runLabel = `${runLabel} · ${g.type}`;
+          const pts = g.points.slice().sort((a, b) => (a.ordinal || 0) - (b.ordinal || 0));
+          const spec = agentDotSpec(g.type);
           return {
             // All runs of a condition share the legend name, so the legend collapses to
             // one color chip per condition and toggling it shows/hides all its runs.
             name: g.condition,
             type: "line",
-            showSymbol: false,
-            data: g.points.sort((a, b) => a[0] - b[0]).map(pt => [pt[0], pt[1], runLabel]),
+            showSymbol: true,
+            // main-agent = solid circle; each subagent type = its own shape; security-monitor = diamond
+            symbol: requestTypeSymbols[g.type] || "circle",
+            symbolSize: spec.size,
+            // Each point is an object so the tooltip can surface the underlying run details.
+            data: pts.map(r => ({
+              value: [r.ordinal, (r.accumulated_cache_hit_rate || 0) * 100],
+              run_id: g.run_id,
+              condition: g.condition,
+              rep: g.rep,
+              type: g.type,
+              request_index: r.request_index,
+              cum_read: r.cum_cache_read,
+              cum_ctx: r.cum_context_tokens,
+              label: runLabel,
+            })),
             lineStyle: { width: 2, type: repLineTypes[g.rep] || "solid", color },
             itemStyle: { color },
           };
         });
       const condsPresent = EXPERIMENT_DATA.conditions.filter(c => series.some(s => s.name === c));
-      charts["cache-chart"].setOption({
+      charts[elId].setOption({
         textStyle: baseTextStyle(),
         tooltip: {
           ...TT,
           trigger: "item",
           formatter(p) {
-            const v = p.data || [];
-            return `<b>${v[2] || p.seriesName}</b><br>Request # within agent-type stream: ${v[0]}<br>run-local hit rate: ${fmt(v[1], 1)}%`;
+            const d = p.data || {};
+            const x = (p.value && p.value[0]) || 0;
+            const y = (p.value && p.value[1]) || 0;
+            const read = d.cum_read != null ? fmt(d.cum_read) : "0";
+            const ctx = d.cum_ctx != null ? fmt(d.cum_ctx) : "0";
+            return `<b>${d.label || p.seriesName}</b>`
+              + `<br>run: ${d.run_id || "—"}`
+              + `<br>agent type: ${d.type || "main-agent"}`
+              + `<br>request # in stream: ${x}`
+              + `<br>accumulated hit rate: ${fmt(y, 1)}%`
+              + `<br>cumulative cache read: ${read} of ${ctx} context tokens`;
           }
         },
         legend: rightLegend(condsPresent),
         grid: { left: 72, right: 230, top: 16, bottom: 62 },
         xAxis: { type: "value", name: "Request # within selected run", min: 1 },
-        yAxis: valueAxis({ ...yName("run-local hit rate (%)", 52), min: 0, max: 100 }),
+        yAxis: valueAxis({ ...yName("prefix cache hit rate (%)", 52), min: 0, max: 100 }),
         dataZoom: [{ type: "inside" }, { type: "slider", height: 20, bottom: 18 }],
         series,
       }, { notMerge: true });
@@ -1056,6 +1061,8 @@ _HTML_TEMPLATE = """<!doctype html>
         const item = {
           value: [ctx, hitRate, turn.total_s, turn.run_id, requestNumber(turn.request_index),
                   requestTypeLabel(turn.request_type), turn.ttft_s],
+          // main-agent stays a circle; each subagent type gets its own shape; security-monitor a diamond
+          symbol: requestTypeSymbols[turn.request_type] || "circle",
           symbolSize: spec.size,
         };
         // security-monitor renders hollow (outline only); others are filled

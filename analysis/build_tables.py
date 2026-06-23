@@ -5,7 +5,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from analysis.parse.parse_tap import tap_turns, tap_components, tap_component_texts
+from analysis.parse.parse_tap import (
+    tap_turns, tap_components, tap_component_texts, drop_empty_turns,
+)
 from analysis.parse.parse_ttft import load_ttft, join_ttft
 from analysis.parse.parse_meta import run_summary
 from analysis.pricing import enrich_turn_costs, token_cost_summary
@@ -13,34 +15,19 @@ from analysis.research_rubric import score_research_report
 
 
 def cache_summary(turns: list[dict]) -> dict:
+    # Hit rate over the raw, as-observed token counts: every reported cache read
+    # is counted, including the warm cache inherited from a shared system-prompt
+    # prefix on a run's first request. No warm-start baseline is subtracted.
     total_in = sum(t["input_tokens"] for t in turns)
     total_cr = sum(t["cache_read"] for t in turns)
     total_cc = sum(t["cache_creation_5m"] + t["cache_creation_1h"] for t in turns)
-    observed_denom = total_in + total_cr + total_cc
-
-    warm_start_by_type: dict[str, float] = {}
-    run_local_read = 0.0
-    run_local_input = 0.0
-    run_local_creation = 0.0
-    for turn in sorted(turns, key=lambda row: row.get("request_index") or 0):
-        request_type = str(turn.get("request_type") or "main-agent")
-        read = float(turn.get("cache_read") or 0)
-        if request_type not in warm_start_by_type:
-            warm_start_by_type[request_type] = read
-        run_local_read += max(0.0, read - warm_start_by_type[request_type])
-        run_local_input += float(turn.get("input_tokens") or 0)
-        run_local_creation += float(
-            (turn.get("cache_creation_5m") or 0) + (turn.get("cache_creation_1h") or 0)
-        )
-    run_local_denom = run_local_input + run_local_read + run_local_creation
+    denom = total_in + total_cr + total_cc
 
     return {
         "total_input": total_in,
         "total_cache_read": total_cr,
         "total_cache_creation": total_cc,
-        "total_run_local_cache_read": int(run_local_read),
-        "observed_cache_hit_ratio": (total_cr / observed_denom) if observed_denom else 0.0,
-        "cache_hit_ratio": (run_local_read / run_local_denom) if run_local_denom else 0.0,
+        "cache_hit_ratio": (total_cr / denom) if denom else 0.0,
     }
 
 
@@ -52,6 +39,9 @@ def build_run(run_dir: Path):
     for f in tap_files:
         tap.extend(json.loads(f.read_text()))
     tap.sort(key=lambda t: t.get("timestamp") or "")
+    # Drop aborted / empty-usage responses before indexing so request_index, num_requests,
+    # and every per-request curve count only real (token-bearing) model requests.
+    tap = drop_empty_turns(tap)
     turns = join_ttft(tap_turns(tap), load_ttft(run_dir / "ttft" / "ttft.jsonl"))
     turns = enrich_turn_costs(turns, meta.get("model"))
     comps = tap_components(tap)
