@@ -112,6 +112,18 @@ def test_api_requires_token(client):
     assert client.get("/api/runs").status_code == 401
 
 
+@pytest.mark.parametrize("path,params", [
+    ("/api/manifest", {}),
+    ("/api/runs", {}),
+    ("/api/turns", {}),
+    ("/api/components", {}),
+    ("/api/component-texts", {"run_id": "r1"}),
+    ("/api/token-rates", {}),
+])
+def test_all_api_routes_require_token(client, path, params):
+    assert client.get(path, params=params).status_code == 401
+
+
 def test_runs_endpoint_with_token(client):
     r = client.get("/api/runs", headers={"Authorization": "Bearer secret123"})
     assert r.status_code == 200
@@ -133,3 +145,29 @@ def test_manifest_endpoint(client):
     r = client.get("/api/manifest", headers={"Authorization": "Bearer secret123"})
     assert r.status_code == 200
     assert {v["key"] for v in r.json()["variants"]} == {"multi_agent", "long_horizon"}
+
+
+def test_clean_recurses_into_nested():
+    from serve.queries import _clean
+    assert _clean(float("nan")) is None
+    assert _clean(1.5) == 1.5
+    assert _clean([1.0, float("inf"), 2.0]) == [1.0, None, 2.0]
+    assert _clean({"a": float("nan"), "b": 2}) == {"a": None, "b": 2}
+
+
+def test_get_turns(data_dir):
+    from serve import queries
+    rows = queries.get_turns()
+    assert len(rows) == 2 and rows[0]["run_id"] == "r1"
+
+
+def test_get_components(data_dir):
+    from serve import queries
+    rows = queries.get_components()
+    assert len(rows) == 1 and rows[0]["component"] == "base system prompt"
+
+
+def test_get_token_rates(data_dir):
+    from serve import queries
+    rates = queries.get_token_rates()
+    assert rates == {"base system prompt": 0.21}
