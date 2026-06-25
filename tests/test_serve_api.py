@@ -73,3 +73,24 @@ def test_manifest_reuses_variants(data_dir):
     assert {v["key"] for v in m["variants"]} == {"multi_agent", "long_horizon"}
     assert {a["condition"] for a in m["available"]} == {"single_agent", "subagents"}
     assert "single_agent" in m["strategy_desc"]
+
+
+def test_require_token_rejects_missing(monkeypatch):
+    from fastapi import HTTPException
+    from serve.auth import require_token
+    monkeypatch.setenv("API_TOKEN", "secret123")
+    with pytest.raises(HTTPException) as exc:
+        require_token(authorization=None)
+    assert exc.value.status_code == 401
+
+
+def test_require_token_accepts_match(monkeypatch):
+    from serve.auth import require_token
+    monkeypatch.setenv("API_TOKEN", "secret123")
+    assert require_token(authorization="Bearer secret123") is None
+
+
+def test_require_token_disabled_when_unset(monkeypatch):
+    from serve.auth import require_token
+    monkeypatch.setenv("API_TOKEN", "")
+    assert require_token(authorization=None) is None
