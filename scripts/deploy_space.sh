@@ -9,7 +9,10 @@ rsync -a --delete "$REPO_ROOT/serve/" "$SPACE_DIR/serve/"
 mkdir -p "$SPACE_DIR/analysis" "$SPACE_DIR/data/processed"
 cp "$REPO_ROOT/analysis/__init__.py"        "$SPACE_DIR/analysis/__init__.py"
 cp "$REPO_ROOT/analysis/report_variants.py" "$SPACE_DIR/analysis/report_variants.py"
-cp "$REPO_ROOT"/data/processed/*.parquet    "$SPACE_DIR/data/processed/"
+shopt -s nullglob
+parquets=("$REPO_ROOT"/data/processed/*.parquet)
+[[ ${#parquets[@]} -gt 0 ]] || { echo "ERROR: no parquet files in data/processed/ — run 'make analyze' first" >&2; exit 1; }
+cp "${parquets[@]}" "$SPACE_DIR/data/processed/"
 cp "$REPO_ROOT/data/processed/token_rates.json" "$SPACE_DIR/data/processed/"
 # HF Space expects Dockerfile + README.md + requirements.txt at the repo root.
 cp "$REPO_ROOT/serve/Dockerfile"    "$SPACE_DIR/Dockerfile"
@@ -18,5 +21,5 @@ cp "$REPO_ROOT/serve/requirements.txt" "$SPACE_DIR/requirements.txt"
 
 cd "$SPACE_DIR"
 git add -A
-git commit -m "deploy: sync API + data" || echo "nothing to commit"
-git push
+git commit -m "deploy: sync API + data" || echo "nothing to commit" >&2
+git push origin HEAD
