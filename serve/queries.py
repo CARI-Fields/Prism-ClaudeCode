@@ -21,9 +21,14 @@ def _parquet(name: str) -> str:
 
 def _clean(v):
     # Starlette's JSONResponse uses allow_nan=False, so NaN/Inf (common in the
-    # research_* columns for coding runs) would 500 the endpoint. Coerce to None.
-    if isinstance(v, float) and not math.isfinite(v):
-        return None
+    # research_* columns for coding runs) would 500 the endpoint. Coerce to None,
+    # recursing into list/struct columns DuckDB returns as native list/dict.
+    if isinstance(v, float):
+        return v if math.isfinite(v) else None
+    if isinstance(v, list):
+        return [_clean(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _clean(x) for k, x in v.items()}
     return v
 
 
