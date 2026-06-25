@@ -4,6 +4,10 @@ import { conditionColor } from '../theme';
 export function BriefBand({ variant, manifest }: { variant: Variant; manifest: Manifest }) {
   return (
     <section className="band band-brief">
+      <div className="band-head">
+        <div className="band-label"><span className="band-no">§0</span>Tasks &amp; strategies</div>
+        <div className="band-scope">What each run is asked to do · the verbatim task prompt and the strategies under comparison</div>
+      </div>
       <div className="brief-grid">
         {variant.tasks.map((task, i) => {
           const meta = manifest.task_meta[task];
