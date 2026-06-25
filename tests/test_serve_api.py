@@ -94,3 +94,42 @@ def test_require_token_disabled_when_unset(monkeypatch):
     from serve.auth import require_token
     monkeypatch.setenv("API_TOKEN", "")
     assert require_token(authorization=None) is None
+
+
+@pytest.fixture
+def client(data_dir):
+    from serve.app import app
+    return TestClient(app)
+
+
+def test_healthz_open(client):
+    r = client.get("/healthz")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ok"}
+
+
+def test_api_requires_token(client):
+    assert client.get("/api/runs").status_code == 401
+
+
+def test_runs_endpoint_with_token(client):
+    r = client.get("/api/runs", headers={"Authorization": "Bearer secret123"})
+    assert r.status_code == 200
+    assert len(r.json()) == 2
+
+
+def test_component_texts_query_param(client):
+    r = client.get(
+        "/api/component-texts",
+        params={"run_id": "r1"},
+        headers={"Authorization": "Bearer secret123"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body) == 1 and body[0]["run_id"] == "r1"
+
+
+def test_manifest_endpoint(client):
+    r = client.get("/api/manifest", headers={"Authorization": "Bearer secret123"})
+    assert r.status_code == 200
+    assert {v["key"] for v in r.json()["variants"]} == {"multi_agent", "long_horizon"}
