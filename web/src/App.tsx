@@ -5,14 +5,17 @@ import { Masthead } from './components/Masthead';
 import { GlobalTaskStrip } from './components/GlobalTaskStrip';
 import { parseHash, toHash } from './state/urlState';
 import { clearTask, initState, setReport, toggleTask } from './state/appState';
-import type { AppState, Manifest } from './types';
+import { BriefBand } from './components/BriefBand';
+import { KpiBand } from './components/KpiBand';
+import { scopeRuns } from './data/filters';
+import type { AppState, Manifest, Run } from './types';
 
 function firstVariantKey(manifest: Manifest, fromUrl: string | null): string {
   if (fromUrl && manifest.variants.some((v) => v.key === fromUrl)) return fromUrl;
   return manifest.variants[0]?.key ?? '';
 }
 
-function Dashboard({ manifest }: { manifest: Manifest }) {
+function Dashboard({ manifest, runs }: { manifest: Manifest; runs: Run[] }) {
   const [state, setState] = useState<AppState>(() => {
     const url = parseHash(window.location.hash);
     return initState(firstVariantKey(manifest, url.report), url.task);
@@ -50,8 +53,9 @@ function Dashboard({ manifest }: { manifest: Manifest }) {
           onToggle={(t) => setState((s) => toggleTask(s, t))}
           onClear={() => setState((s) => clearTask(s))}
         />
-        {/* §0 brief band + KPI band → Task 7; §1/§2/§3 → Task 8. */}
-        <p className="note">Active report: {variant.title} · tasks {JSON.stringify(state.task)}</p>
+        <BriefBand variant={variant} manifest={manifest} />
+        <KpiBand runs={scopeRuns(runs, state.task, { condition: [], rep: [], agent: [] })} />
+        {/* §1/§2/§3 → Task 8 */}
       </main>
     </>
   );
@@ -62,7 +66,7 @@ function Gate() {
   if (status === 'loading') return <main><p className="note">Loading…</p></main>;
   if (status === 'need-token') return <TokenGate />;
   if (status === 'error') return <main><p className="note">Failed to load: {error}</p></main>;
-  if (status === 'ready' && data) return <Dashboard manifest={data.manifest} />;
+  if (status === 'ready' && data) return <Dashboard manifest={data.manifest} runs={data.runs} />;
   return null;
 }
 
