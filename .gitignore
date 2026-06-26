@@ -6,7 +6,10 @@
 # Live workspace scratch dirs — regenerated, not tracked
 /experiment/tasks/*/workspace/
 
-# figures/ and reports/ stay committed (now under analysis/).
+# Generated analysis reports — report.html inlines the FULL dataset + per-request
+# context texts, so it must not be committed (esp. on a public repo). Regenerate
+# via `make analyze`. figures/ (aggregate charts, no raw text) stay committed.
+/analysis/reports/
 
 # ── Python ──
 __pycache__/
