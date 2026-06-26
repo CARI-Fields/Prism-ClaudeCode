@@ -21,3 +21,7 @@
 html, body, #root { height: 100%; }
 body { margin: 0; background: var(--app-bg); color: var(--app-ink); font-family: var(--app-sans); }
 .app-root { min-height: 100%; background: var(--app-bg); }
+.app-body { display: grid; grid-template-columns: 248px minmax(0, 1fr); gap: 0; }
+.app-rail { background: var(--app-rail-bg); border-right: 1px solid var(--app-line); padding: 16px 14px; min-height: calc(100vh - 50px); position: sticky; top: 0; align-self: start; }
+.app-canvas { padding: 20px 24px 56px; max-width: 1280px; }
+@media (max-width: 880px) { .app-body { grid-template-columns: 1fr; } .app-rail { position: static; min-height: 0; } }
