@@ -1,5 +1,5 @@
-# Raw captured data — large; regenerate by re-running the harness
-data/raw/
+# All experiment data — large; regenerate by re-running the harness / make analyze
+data/
 
 # Live workspace dirs — regenerated scratch dirs, not tracked
 tasks/*/workspace/
