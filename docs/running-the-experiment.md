@@ -65,11 +65,11 @@ The runner auto-runs `docker stop qwen` + a gym health check before each cell, a
 make run TASK=coding   CONDITION=single_agent REP=1
 make run TASK=research CONDITION=subagents    REP=1
 ```
-Equivalent direct form: `.venv/bin/python -m harness.runner --task coding --condition single_agent --rep 1`.
+Equivalent direct form: `.venv/bin/python -m experiment.harness.runner --task coding --condition single_agent --rep 1`.
 
 ### Preview a cell without calling the model
 ```bash
-.venv/bin/python -m harness.runner --task coding --condition single_agent --rep 1 --dry-run
+.venv/bin/python -m experiment.harness.runner --task coding --condition single_agent --rep 1 --dry-run
 ```
 
 ### A chosen subset
@@ -81,7 +81,7 @@ for c in single_agent subagents; do
 done
 ```
 
-Each cell lands in `data/raw/<task>__<condition>__<rep>__<UTC-ts>/` with
+Each cell lands in `analysis/data/raw/<task>__<condition>__<rep>__<UTC-ts>/` with
 `tap/ transcripts/ ttft/ workspace/ run_meta.json`.
 
 ---
@@ -108,29 +108,29 @@ make run-all     # runs all 30 sequentially; failures are isolated (status:"fail
 ## 4. `make analyze` — figures + report
 
 `make analyze` is **idempotent and cumulative**: it rescans *everything currently in*
-`data/raw/` and rebuilds from scratch (it does not append).
+`analysis/data/raw/` and rebuilds from scratch (it does not append).
 
 ```bash
 make analyze
 ```
 
 What it does:
-1. **Builds tidy tables** → `data/processed/{turns,components,runs}.parquet`. It includes
-   every `data/raw/<run_id>/` that has a `run_meta.json` (partial/aborted cells without one
+1. **Builds tidy tables** → `analysis/data/processed/{turns,components,runs}.parquet`. It includes
+   every `analysis/data/raw/<run_id>/` that has a `run_meta.json` (partial/aborted cells without one
    are skipped; per-run errors are caught and skipped with a printed note).
-2. **Renders 4 figures** → `figures/`:
+2. **Renders 4 figures** → `analysis/figures/`:
    - `cache_accumulation.png` — **headline**: cumulative `cache_read` (prefix-cache hits) per
      condition over requests
    - `context_growth.png` — per-request context size by component (system / tools / messages)
    - `latency.png` — TTFT vs total latency by condition
    - `success_speedup.png` — success rate + mean kernel speedup by condition
-3. **Writes** `reports/report.md` — a runs-summary table (one row per run: `run_id, task,
+3. **Writes** `analysis/reports/report.md` — a runs-summary table (one row per run: `run_id, task,
    condition, success, speedup, num_requests, total_cache_read, cache_hit_ratio,
    completion_time_s`) with the four figures embedded.
 
-If `data/raw/` is empty it writes a "No runs found" stub instead of crashing.
+If `analysis/data/raw/` is empty it writes a "No runs found" stub instead of crashing.
 
-`data/processed/` is regenerated each time (gitignored); `figures/` + `reports/report.md`
+`analysis/data/processed/` is regenerated each time (gitignored); `analysis/figures/` + `analysis/reports/report.md`
 are the committed deliverables.
 
 ---
@@ -146,4 +146,4 @@ make analyze                                   # regenerate figures + report ove
 ```
 
 You control which cells exist by running them individually; `make analyze` always reflects
-exactly what's in `data/raw/`.
+exactly what's in `analysis/data/raw/`.

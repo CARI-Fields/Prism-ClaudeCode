@@ -8,17 +8,17 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from harness.config import (
+from experiment.harness.config import (
     ExperimentConfig, TaskConfig, ConditionConfig,
     load_experiment, load_task, load_condition,
 )
-from harness.run_meta import make_run_id, write_run_meta, gather_versions
-from harness.capture.collect_transcripts import collect
-from harness.capture.collect_tap import collect_tap
-from harness.capture.collect_ttft import collect_ttft
-from harness.services import ensure_services
-from harness.score.score_research import score_research
-from harness.score.score_coding import score_kernel
+from experiment.harness.run_meta import make_run_id, write_run_meta, gather_versions
+from experiment.harness.capture.collect_transcripts import collect
+from experiment.harness.capture.collect_tap import collect_tap
+from experiment.harness.capture.collect_ttft import collect_ttft
+from experiment.harness.services import ensure_services
+from experiment.harness.score.score_research import score_research
+from experiment.harness.score.score_coding import score_kernel
 
 
 @dataclass(frozen=True)
@@ -139,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--condition")
     ap.add_argument("--rep", type=int)
     ap.add_argument("--all", action="store_true")
-    ap.add_argument("--config", default="config/experiment.yaml")
+    ap.add_argument("--config", default="experiment/config/experiment.yaml")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
@@ -149,8 +149,8 @@ def main(argv: list[str] | None = None) -> int:
         failures: list[str] = []
         cells = iter_cells(exp)
         for task_name, cond_name, rep in cells:
-            task = load_task(Path(f"config/tasks/{task_name}.yaml"))
-            cond = load_condition(Path(f"config/conditions/{cond_name}.yaml"))
+            task = load_task(Path(f"experiment/config/tasks/{task_name}.yaml"))
+            cond = load_condition(Path(f"experiment/config/conditions/{cond_name}.yaml"))
             plan = plan_run(exp, task, cond, rep, _now())
             print(f"=== {plan.run_id} ===")
             try:
@@ -172,8 +172,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{len(failures)}/{len(cells)} cell(s) failed: {failures}")
         return 0
 
-    task = load_task(Path(f"config/tasks/{args.task}.yaml"))
-    cond = load_condition(Path(f"config/conditions/{args.condition}.yaml"))
+    task = load_task(Path(f"experiment/config/tasks/{args.task}.yaml"))
+    cond = load_condition(Path(f"experiment/config/conditions/{args.condition}.yaml"))
     plan = plan_run(exp, task, cond, args.rep, _now())
     execute(plan, exp, dry_run=args.dry_run)
     return 0

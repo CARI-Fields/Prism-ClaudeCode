@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 def test_goal_launcher_starts_prompt_with_goal_slash_command():
-    path = Path("harness/conditions/goal.sh")
+    path = Path("experiment/harness/conditions/goal.sh")
     text = path.read_text()
 
     assert path.stat().st_mode & 0o111
@@ -14,7 +14,7 @@ def test_goal_launcher_starts_prompt_with_goal_slash_command():
 
 
 def test_subagents_launcher_requires_foreground_delegation():
-    text = Path("harness/conditions/subagents.sh").read_text()
+    text = Path("experiment/harness/conditions/subagents.sh").read_text()
 
     assert "MUST use the Task tool" in text
     assert "exactly one short foreground subagent task" in text
@@ -23,8 +23,8 @@ def test_subagents_launcher_requires_foreground_delegation():
 
 
 def test_loop_launchers_default_to_lightweight_iteration_budget():
-    ralph = Path("harness/conditions/ralph_loop.sh").read_text()
-    loop_dynamic = Path("harness/conditions/loop_dynamic.sh").read_text()
+    ralph = Path("experiment/harness/conditions/ralph_loop.sh").read_text()
+    loop_dynamic = Path("experiment/harness/conditions/loop_dynamic.sh").read_text()
 
     assert 'ITERS="${RALPH_ITERS:-2}"' in ralph
     assert 'RALPH_PLUGIN_DIR="${RALPH_PLUGIN_DIR:-$HOME/.claude/plugins/cache/claude-plugins-official/ralph-loop/1.0.0}"' in ralph
@@ -41,7 +41,7 @@ def test_loop_launchers_default_to_lightweight_iteration_budget():
 
 
 def test_dynamic_workflow_launcher_bounds_agent_fanout():
-    text = Path("harness/conditions/dynamic_workflow.sh").read_text()
+    text = Path("experiment/harness/conditions/dynamic_workflow.sh").read_text()
 
     assert "MUST use the Workflow tool exactly once" in text
     assert "launch exactly one short agent" in text

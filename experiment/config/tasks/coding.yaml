@@ -1,0 +1,8 @@
+name: coding
+prompt_file: experiment/tasks/coding/prompt.md
+workspace: experiment/tasks/coding/workspace
+workspace_seed: experiment/tasks/coding/workspace_seed
+kind: coding
+seed_files:
+  - experiment/tasks/coding/check_kernel.sh
+  - experiment/tasks/coding/reference_code.py

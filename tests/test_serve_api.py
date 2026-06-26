@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 
 def test_get_settings_reads_env(monkeypatch):
-    from serve.config import get_settings
+    from web.api.config import get_settings
     monkeypatch.setenv("DATA_DIR", "/tmp/x")
     monkeypatch.setenv("API_TOKEN", "abc")
     monkeypatch.setenv("ALLOWED_ORIGINS", "https://a.app, https://b.app")
@@ -47,20 +47,20 @@ def data_dir(tmp_path, monkeypatch):
 
 
 def test_get_runs(data_dir):
-    from serve import queries
+    from web.api import queries
     rows = queries.get_runs()
     assert len(rows) == 2
     assert {r["run_id"] for r in rows} == {"r1", "r2"}
 
 
 def test_nan_serialized_as_null(data_dir):
-    from serve import queries
+    from web.api import queries
     rows = {r["run_id"]: r for r in queries.get_runs()}
     assert rows["r2"]["speedup"] is None  # NaN must become JSON null, not float('nan')
 
 
 def test_component_texts_filters_by_run(data_dir):
-    from serve import queries
+    from web.api import queries
     rows = queries.get_component_texts("r1")
     assert len(rows) == 1
     assert rows[0]["run_id"] == "r1"
@@ -68,7 +68,7 @@ def test_component_texts_filters_by_run(data_dir):
 
 
 def test_manifest_reuses_variants(data_dir):
-    from serve import queries
+    from web.api import queries
     m = queries.get_manifest()
     assert {v["key"] for v in m["variants"]} == {"multi_agent", "long_horizon"}
     assert {a["condition"] for a in m["available"]} == {"single_agent", "subagents"}
@@ -77,7 +77,7 @@ def test_manifest_reuses_variants(data_dir):
 
 def test_require_token_rejects_missing(monkeypatch):
     from fastapi import HTTPException
-    from serve.auth import require_token
+    from web.api.auth import require_token
     monkeypatch.setenv("API_TOKEN", "secret123")
     with pytest.raises(HTTPException) as exc:
         require_token(authorization=None)
@@ -85,20 +85,20 @@ def test_require_token_rejects_missing(monkeypatch):
 
 
 def test_require_token_accepts_match(monkeypatch):
-    from serve.auth import require_token
+    from web.api.auth import require_token
     monkeypatch.setenv("API_TOKEN", "secret123")
     assert require_token(authorization="Bearer secret123") is None
 
 
 def test_require_token_disabled_when_unset(monkeypatch):
-    from serve.auth import require_token
+    from web.api.auth import require_token
     monkeypatch.setenv("API_TOKEN", "")
     assert require_token(authorization=None) is None
 
 
 @pytest.fixture
 def client(data_dir):
-    from serve.app import app
+    from web.api.app import app
     return TestClient(app)
 
 
@@ -148,7 +148,7 @@ def test_manifest_endpoint(client):
 
 
 def test_clean_recurses_into_nested():
-    from serve.queries import _clean
+    from web.api.queries import _clean
     assert _clean(float("nan")) is None
     assert _clean(1.5) == 1.5
     assert _clean([1.0, float("inf"), 2.0]) == [1.0, None, 2.0]
@@ -156,18 +156,18 @@ def test_clean_recurses_into_nested():
 
 
 def test_get_turns(data_dir):
-    from serve import queries
+    from web.api import queries
     rows = queries.get_turns()
     assert len(rows) == 2 and rows[0]["run_id"] == "r1"
 
 
 def test_get_components(data_dir):
-    from serve import queries
+    from web.api import queries
     rows = queries.get_components()
     assert len(rows) == 1 and rows[0]["component"] == "base system prompt"
 
 
 def test_get_token_rates(data_dir):
-    from serve import queries
+    from web.api import queries
     rates = queries.get_token_rates()
     assert rates == {"base system prompt": 0.21}

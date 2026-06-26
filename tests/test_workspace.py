@@ -1,5 +1,5 @@
 from pathlib import Path
-from harness.workspace import restore_workspace
+from experiment.harness.workspace import restore_workspace
 
 def test_restore_workspace_replaces_live_with_seed(tmp_path: Path):
     seed = tmp_path / "seed"; seed.mkdir()

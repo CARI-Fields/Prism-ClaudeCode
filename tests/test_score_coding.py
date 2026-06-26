@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from harness.score.score_coding import (
+from experiment.harness.score.score_coding import (
     build_eval_request,
     normalize_eval_result,
     score_kernel,
@@ -65,7 +65,7 @@ def test_score_kernel_defaults_to_content_addressed_task_id(monkeypatch):
 
 
 def test_check_kernel_uses_content_addressed_selftest_task_id():
-    text = Path("tasks/coding/check_kernel.sh").read_text()
+    text = Path("experiment/tasks/coding/check_kernel.sh").read_text()
 
     assert '"task_id":"selftest"' not in text
     assert "hashlib.sha256" in text
