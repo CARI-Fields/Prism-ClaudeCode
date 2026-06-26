@@ -1,22 +1,31 @@
 #!/usr/bin/env bash
-# Sync the API source + processed parquet into the HF Space repo clone and push.
-# Usage: SPACE_DIR=/path/to/space-clone make deploy-space
-# The Space mirrors the repo layout: web/api/ (app), analysis/ (report metadata),
-# analysis/data/processed/ (parquet). Dockerfile/README/requirements live at the Space root.
+# Deploy the report API to its public HF Space + push data to the PRIVATE dataset.
+#
+# The Space is public (so the Vercel frontend can reach the token-gated API), so
+# it must contain ONLY code — never the parquet. The data goes to a private HF
+# Dataset and is pulled at startup via the Space secrets HF_DATASET_REPO +
+# HF_ACCESS_TOKEN (see web/api/data_source.py).
+#
+# Usage:
+#   SPACE_DIR=/path/to/space-clone \
+#   HF_DATASET_REPO=your-ns/prism-cc-data HF_ACCESS_TOKEN=hf_xxx \
+#   make deploy-space
 set -euo pipefail
 SPACE_DIR="${SPACE_DIR:?set SPACE_DIR to a local clone of the HF Space git repo}"
+: "${HF_DATASET_REPO:?set HF_DATASET_REPO to the private dataset id}"
+: "${HF_ACCESS_TOKEN:?set HF_ACCESS_TOKEN to a write token}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+PY="${PY:-$REPO_ROOT/.venv/bin/python}"
 
+# 1. Push the processed parquet to the PRIVATE dataset (NOT into the Space).
+"$PY" "$REPO_ROOT/scripts/push_data.py" "$REPO_ROOT/analysis/data/processed"
+
+# 2. Sync ONLY code into the Space clone (mirrors the repo layout: web/api + analysis helpers).
 rsync -a --delete "$REPO_ROOT/web/api/" "$SPACE_DIR/web/api/"
 cp "$REPO_ROOT/web/__init__.py" "$SPACE_DIR/web/__init__.py"   # package marker so `web.api` imports
-mkdir -p "$SPACE_DIR/analysis" "$SPACE_DIR/analysis/data/processed"
+mkdir -p "$SPACE_DIR/analysis"
 cp "$REPO_ROOT/analysis/__init__.py"        "$SPACE_DIR/analysis/__init__.py"
 cp "$REPO_ROOT/analysis/report_variants.py" "$SPACE_DIR/analysis/report_variants.py"
-shopt -s nullglob
-parquets=("$REPO_ROOT"/analysis/data/processed/*.parquet)
-[[ ${#parquets[@]} -gt 0 ]] || { echo "ERROR: no parquet files in analysis/data/processed/ — run 'make analyze' first" >&2; exit 1; }
-cp "${parquets[@]}" "$SPACE_DIR/analysis/data/processed/"
-cp "$REPO_ROOT/analysis/data/processed/token_rates.json" "$SPACE_DIR/analysis/data/processed/"
 # HF Space expects Dockerfile + README.md + requirements.txt at the repo root.
 cp "$REPO_ROOT/web/api/Dockerfile"    "$SPACE_DIR/Dockerfile"
 cp "$REPO_ROOT/web/api/README.md"     "$SPACE_DIR/README.md"
@@ -24,5 +33,6 @@ cp "$REPO_ROOT/web/api/requirements.txt" "$SPACE_DIR/requirements.txt"
 
 cd "$SPACE_DIR"
 git add -A
-git commit -m "deploy: sync API + data" || echo "nothing to commit" >&2
+git commit -m "deploy: sync API code (data lives in the private dataset)" || echo "nothing to commit" >&2
 git push origin HEAD
+echo "Deployed. Ensure the Space secrets HF_DATASET_REPO + HF_ACCESS_TOKEN + API_TOKEN are set."
