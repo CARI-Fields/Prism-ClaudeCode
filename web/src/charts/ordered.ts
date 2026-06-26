@@ -57,7 +57,8 @@ export function groupedXAxis(o: Ordered): Record<string, unknown> {
       fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
       fontSize: 10,
       color: '#5c6675',
-      formatter: (v: string) => v,
+      formatter: (value: string, index: number) =>
+        o.groupAxisLabels[index] ? `${o.groupAxisLabels[index]} (${value})` : value,
     },
   });
 }

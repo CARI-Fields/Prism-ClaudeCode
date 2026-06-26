@@ -89,7 +89,7 @@ export function Section3({ variant, state, runs, turns, reps, agentTypes, compon
                   setSel((s) => ({ ...s, [run.run_id]: { component: p.seriesName, requestIndex: row.request_index, type: String(row.request_type ?? 'main-agent'), tokens: bd.byKey.get(`${pos}:${p.seriesName}`) ?? 0 } }));
                 } : undefined}
               />
-              <ContextTextPanel runId={run.run_id} selection={sel[run.run_id] ?? null} />
+              <ContextTextPanel runId={run.run_id} selection={mode.clickable ? (sel[run.run_id] ?? null) : null} />
             </article>
           );
         })}
