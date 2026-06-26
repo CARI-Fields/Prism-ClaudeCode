@@ -22,8 +22,10 @@ describe('AppStateProvider', () => {
     render(<AppStateProvider manifest={manifest}><Probe /></AppStateProvider>);
     expect(screen.getByText('mode:light')).toBeInTheDocument();
     expect(screen.getByText('view:overview')).toBeInTheDocument();
+    expect(document.querySelector('.app-root')).not.toHaveClass('bp5-dark');
     act(() => screen.getByText('t').click());
     expect(screen.getByText('mode:dark')).toBeInTheDocument();
+    expect(document.querySelector('.app-root')).toHaveClass('bp5-dark');
     expect(window.location.hash).toContain('theme=dark');
     act(() => screen.getByText('v').click());
     expect(window.location.hash).toContain('view=s2');

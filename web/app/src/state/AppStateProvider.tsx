@@ -38,6 +38,7 @@ export function AppStateProvider({ manifest, children }: { manifest: Manifest; c
   return <StateCtx.Provider value={value}><div className={`app-root${state.theme === 'dark' ? ' bp5-dark' : ''}`}>{children}</div></StateCtx.Provider>;
 }
 
+// Read-only state accessor; mutation flows through useTheme/useView/useReport/useFilter (no public dispatch by design).
 export function useUi() { return useCtx().state; }
 export function useTheme() {
   const { state, setState } = useCtx();
