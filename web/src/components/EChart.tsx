@@ -2,7 +2,13 @@ import { useEffect, useRef } from 'react';
 import { echarts } from '../charts/echartsCore';
 import type { ECharts } from 'echarts/core';
 
-export function EChart({ option, className }: { option: unknown; className?: string }) {
+interface EChartProps {
+  option: unknown;
+  className?: string;
+  onClick?: (p: { seriesName: string; dataIndex: number }) => void;
+}
+
+export function EChart({ option, className, onClick }: EChartProps) {
   const elRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ECharts | null>(null);
 
@@ -18,6 +24,14 @@ export function EChart({ option, className }: { option: unknown; className?: str
   useEffect(() => {
     chartRef.current?.setOption(option as Parameters<ECharts['setOption']>[0], true);
   }, [option]);
+
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.off('click');
+    if (onClick) {
+      chartRef.current.on('click', (p) => onClick({ seriesName: String(p.seriesName ?? ''), dataIndex: Number(p.dataIndex) }));
+    }
+  }, [onClick]);
 
   return <div ref={elRef} className={className ?? 'chart'} />;
 }

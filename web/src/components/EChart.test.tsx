@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const inst = { setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn() };
+const inst = { setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn(), on: vi.fn(), off: vi.fn() };
 // Mock the central core module so jsdom never touches a real (canvas-backed) chart.
 vi.mock('../charts/echartsCore', () => ({ echarts: { init: vi.fn(() => inst), use: vi.fn() } }));
 
