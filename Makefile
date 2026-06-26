@@ -1,5 +1,5 @@
 # Run all targets from the repo root.
-.PHONY: setup tap-check run run-all dry-all clean test ttft-up services-up analyze
+.PHONY: setup tap-check run run-all dry-all clean test ttft-up services-up analyze serve deploy-space
 PY ?= .venv/bin/python
 
 setup:
@@ -35,3 +35,9 @@ services-up:
 
 analyze:
 	$(PY) -c "from analysis.report import generate; print(generate('data/raw','data/processed','figures','reports/report.md'))"
+
+serve:
+	DATA_DIR=data/processed $(PY) -m uvicorn serve.app:app --reload --port 8799
+
+deploy-space:
+	bash scripts/deploy_space.sh
