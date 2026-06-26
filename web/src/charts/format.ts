@@ -26,6 +26,6 @@ export function pct(value: number | null | undefined, digits = 0): string {
 }
 export function fmtMetric(value: number | null | undefined, metric: string): string {
   if (metric.includes('cost_usd')) return fmtUsd(value);
-  if (metric.includes('ratio') || metric.includes('rate')) return pct(value);
+  if (metric.includes('ratio') || metric.includes('rate')) return fmt(value);
   return fmt(value);
 }

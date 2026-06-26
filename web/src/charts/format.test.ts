@@ -23,8 +23,8 @@ describe('format', () => {
   });
   it('fmtMetric routes by metric name', () => {
     expect(fmtMetric(0.5, 'mean_total_cost_usd')).toBe('$0.500');
-    expect(fmtMetric(0.81, 'mean_cache_hit_ratio')).toBe('81%');
-    expect(fmtMetric(0.81, 'success_rate')).toBe('81%');
+    expect(fmtMetric(0.81, 'mean_cache_hit_ratio')).toBe('0.8');
+    expect(fmtMetric(0.81, 'success_rate')).toBe('0.8');
     expect(fmtMetric(5.2, 'mean_num_requests')).toBe('5.2');
   });
 });

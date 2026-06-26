@@ -44,8 +44,8 @@ export function Section1({ variant, state, runs, onToggle, onClear }: Props) {
     [runs],
   );
 
-  const metrics = useMemo(() => conditionMetrics(runs, tasks, conds), [runs, tasks, conds]);
-  const overheads = useMemo(() => conditionOverheads(metrics, tasks, conds), [metrics, tasks, conds]);
+  const metrics = useMemo(() => conditionMetrics(runs, tasks, variant.conditions), [runs, tasks, variant.conditions]);
+  const overheads = useMemo(() => conditionOverheads(metrics, tasks, variant.conditions), [metrics, tasks, variant.conditions]);
   const matrix = useMemo(() => matrixData(runs, tasks, reps, conds), [runs, tasks, reps, conds]);
 
   const metricLabel = METRICS.find(([v]) => v === metric)?.[1] ?? metric;
