@@ -18,7 +18,7 @@ from typing import Any
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
-TASKS_DIR = ROOT / "tasks"
+TASKS_DIR = ROOT / "experiment" / "tasks"
 
 # One-line plain-language description of each orchestration strategy, written from the
 # operator's side ("what it does"), used in each dashboard's strategy legend.
@@ -31,7 +31,7 @@ STRATEGY_DESC = {
 }
 
 # Title + what-it-measures for every task that can appear in a report, keyed by the task
-# directory name under tasks/.
+# directory name under experiment/tasks/.
 TASK_META = {
     "coding": {
         "title": "Fused Triton kernel",
@@ -107,8 +107,8 @@ def build_page(variant: dict[str, Any], runs: pd.DataFrame) -> dict[str, Any]:
             "task": task,
             "title": meta["title"],
             "measures": meta["measures"],
-            "source": f"tasks/{task}/prompt.md",
-            "prompt": _read_prompt(task) or "Prompt not found — this task's spec will appear once it is added under tasks/.",
+            "source": f"experiment/tasks/{task}/prompt.md",
+            "prompt": _read_prompt(task) or "Prompt not found — this task's spec will appear once it is added under experiment/tasks/.",
             "has_data": _task_has_runs(runs, task, variant["conditions"]),
         })
     strategies = [{

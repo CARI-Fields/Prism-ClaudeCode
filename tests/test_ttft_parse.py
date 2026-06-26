@@ -1,4 +1,4 @@
-from harness.capture.ttft_parse import SseTimer
+from experiment.harness.capture.ttft_parse import SseTimer
 
 
 def test_sse_timer_captures_milestones():

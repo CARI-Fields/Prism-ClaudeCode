@@ -1,4 +1,4 @@
-from harness.score.extract import extract_last_code_block
+from experiment.harness.score.extract import extract_last_code_block
 
 
 def test_extracts_last_python_block():

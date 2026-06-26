@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-import harness.capture.collect_tap as ct
-from harness.capture.collect_tap import find_tap_sessions, collect_tap
+import experiment.harness.capture.collect_tap as ct
+from experiment.harness.capture.collect_tap import find_tap_sessions, collect_tap
 
 
 def _make_db(path: Path, rows):

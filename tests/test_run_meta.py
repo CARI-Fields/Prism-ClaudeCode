@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from harness.run_meta import make_run_id, write_run_meta
+from experiment.harness.run_meta import make_run_id, write_run_meta
 
 
 def test_make_run_id_pads_rep_and_uses_utc():

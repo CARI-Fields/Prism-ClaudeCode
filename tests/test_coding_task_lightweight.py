@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 def test_coding_reference_is_lightweight_elementwise_task():
-    text = Path("tasks/coding/reference_code.py").read_text()
+    text = Path("experiment/tasks/coding/reference_code.py").read_text()
 
     assert "nn.Linear" not in text
     assert "matmul" not in text.lower()
@@ -13,7 +13,7 @@ def test_coding_reference_is_lightweight_elementwise_task():
 
 
 def test_coding_prompt_is_bounded_and_discourages_search():
-    text = Path("tasks/coding/prompt.md").read_text()
+    text = Path("experiment/tasks/coding/prompt.md").read_text()
 
     assert "bounded experiment task" in text
     assert "Do not do broad benchmark sweeps or autotuning" in text

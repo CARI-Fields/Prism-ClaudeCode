@@ -7,7 +7,7 @@ from pathlib import Path
 import duckdb
 
 from analysis.report_variants import STRATEGY_DESC, TASK_META, VARIANTS
-from serve.config import get_settings
+from web.api.config import get_settings
 
 
 def _data_dir() -> Path:

@@ -14,19 +14,19 @@ test:
 
 # Single cell: make run TASK=coding CONDITION=single_agent REP=1
 run:
-	$(PY) -m harness.runner --task $(TASK) --condition $(CONDITION) --rep $(REP)
+	$(PY) -m experiment.harness.runner --task $(TASK) --condition $(CONDITION) --rep $(REP)
 
 run-all:
-	$(PY) -m harness.runner --all
+	$(PY) -m experiment.harness.runner --all
 
 dry-all:
-	$(PY) -m harness.runner --all --dry-run
+	$(PY) -m experiment.harness.runner --all --dry-run
 
 clean:
-	rm -rf data/raw/*
+	rm -rf analysis/data/raw/*
 
 ttft-up:
-	bash harness/capture/start_ttft.sh 8770 /tmp/cc-exp-ttft.jsonl
+	bash experiment/harness/capture/start_ttft.sh 8770 /tmp/cc-exp-ttft.jsonl
 
 services-up:
 	sg docker -c "docker stop qwen" || true
@@ -34,10 +34,10 @@ services-up:
 	$(MAKE) ttft-up
 
 analyze:
-	$(PY) -c "from analysis.report import generate; print(generate('data/raw','data/processed','figures','reports/report.md'))"
+	$(PY) -c "from analysis.report import generate; print(generate('analysis/data/raw','analysis/data/processed','analysis/figures','analysis/reports/report.md'))"
 
 serve:
-	DATA_DIR=data/processed $(PY) -m uvicorn serve.app:app --reload --port 8799
+	DATA_DIR=analysis/data/processed $(PY) -m uvicorn web.api.app:app --reload --port 8799
 
 deploy-space:
 	bash scripts/deploy_space.sh

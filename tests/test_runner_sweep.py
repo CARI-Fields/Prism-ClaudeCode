@@ -1,7 +1,7 @@
 from pathlib import Path
-from harness.config import ExperimentConfig
-from harness.runner import iter_cells
-import harness.runner as R
+from experiment.harness.config import ExperimentConfig
+from experiment.harness.runner import iter_cells
+import experiment.harness.runner as R
 
 
 def test_iter_cells_full_factorial():
@@ -25,7 +25,7 @@ def test_iter_cells_full_factorial():
 
 
 def test_main_all_isolates_cell_failures(monkeypatch):
-    import harness.runner as R
+    import experiment.harness.runner as R
     written = []
 
     def fake_execute(plan, exp, *, dry_run=False):
