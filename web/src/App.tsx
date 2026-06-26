@@ -11,14 +11,14 @@ import { Section1 } from './components/Section1';
 import { Section2 } from './components/Section2';
 import { Section3 } from './components/Section3';
 import { presentAgentTypes, scopeRuns, scopeTurns } from './data/filters';
-import type { AppState, Manifest, Run, Turn } from './types';
+import type { AppState, Component, Manifest, Run, Turn } from './types';
 
 function firstVariantKey(manifest: Manifest, fromUrl: string | null): string {
   if (fromUrl && manifest.variants.some((v) => v.key === fromUrl)) return fromUrl;
   return manifest.variants[0]?.key ?? '';
 }
 
-function Dashboard({ manifest, runs, turns }: { manifest: Manifest; runs: Run[]; turns: Turn[] }) {
+function Dashboard({ manifest, runs, turns, components }: { manifest: Manifest; runs: Run[]; turns: Turn[]; components: Component[] }) {
   const [state, setState] = useState<AppState>(() => {
     const url = parseHash(window.location.hash);
     return initState(firstVariantKey(manifest, url.report), url.task);
@@ -79,8 +79,8 @@ function Dashboard({ manifest, runs, turns }: { manifest: Manifest; runs: Run[];
         <BriefBand variant={variant} manifest={manifest} />
         <KpiBand runs={scopeRuns(runs, state.task, { condition: [], rep: [], agent: [] })} />
         <Section1 variant={variant} state={state} runs={scopeRuns(runs, state.task, { condition: [], rep: [], agent: [] })} onToggle={sectionToggle('s1')} onClear={sectionClear('s1')} />
-        <Section2 variant={variant} state={state} reps={reps} agentTypes={agents2} onToggle={sectionToggle('s2')} onClear={sectionClear('s2')} />
-        <Section3 variant={variant} state={state} reps={reps} agentTypes={agents3} onToggle={sectionToggle('s3')} onClear={sectionClear('s3')} />
+        <Section2 variant={variant} state={state} turns={scopeTurns(turns, state.task, state.s2)} reps={reps} agentTypes={agents2} onToggle={sectionToggle('s2')} onClear={sectionClear('s2')} />
+        <Section3 variant={variant} state={state} runs={scopeRuns(runs, state.task, state.s3)} turns={scopeTurns(turns, state.task, state.s3)} reps={reps} agentTypes={agents3} components={components} onToggle={sectionToggle('s3')} onClear={sectionClear('s3')} />
       </main>
     </>
   );
@@ -91,7 +91,7 @@ function Gate() {
   if (status === 'loading') return <main><p className="note">Loading…</p></main>;
   if (status === 'need-token') return <TokenGate />;
   if (status === 'error') return <main><p className="note">Failed to load: {error}</p></main>;
-  if (status === 'ready' && data) return <Dashboard manifest={data.manifest} runs={data.runs} turns={data.turns} />;
+  if (status === 'ready' && data) return <Dashboard manifest={data.manifest} runs={data.runs} turns={data.turns} components={data.components} />;
   return null;
 }
 
