@@ -29,7 +29,7 @@ def test_loop_launchers_default_to_lightweight_iteration_budget():
     assert 'ITERS="${RALPH_ITERS:-2}"' in ralph
     assert 'RALPH_PLUGIN_DIR="${RALPH_PLUGIN_DIR:-$HOME/.claude/plugins/cache/claude-plugins-official/ralph-loop/1.0.0}"' in ralph
     assert "--plugin-dir" in ralph
-    assert "/ralph-loop" in ralph
+    assert "/ralph-loop:ralph-loop" in ralph
     assert "--max-iterations" in ralph
     assert "--completion-promise" in ralph
     assert "_feedback.sh" not in ralph

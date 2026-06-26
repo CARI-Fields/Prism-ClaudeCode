@@ -89,10 +89,16 @@ Each cell lands in `data/raw/<task>__<condition>__<rep>__<UTC-ts>/` with
 ## 3. Cost / scope controls
 
 - **Cheapest first:** run `research` conditions — no gym, no kernel eval.
-- **Shorten loops:** `ralph_loop`/`loop_dynamic` default to 5 iterations. Reduce them:
+- **Shorten loops:** `ralph_loop`/`loop_dynamic` default to 2 iterations. `ralph_loop`
+  uses the official Claude Code Ralph Loop plugin via `/ralph-loop`; `RALPH_ITERS`
+  maps to the plugin's `--max-iterations`.
   ```bash
   RALPH_ITERS=2 make run TASK=coding CONDITION=ralph_loop REP=1
   LOOP_ITERS=2  make run TASK=coding CONDITION=loop_dynamic REP=1
+  ```
+- **Ralph plugin path:** override the cached plugin directory if needed:
+  ```bash
+  RALPH_PLUGIN_DIR=/path/to/ralph-loop/1.0.0 make run TASK=research CONDITION=ralph_loop REP=1
   ```
 - **Fewer cells:** just run the conditions/reps you care about (section 2).
 - **Sequential only:** never run cells concurrently (shared TTFT log).

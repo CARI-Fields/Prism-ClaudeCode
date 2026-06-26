@@ -433,7 +433,8 @@ export function matrixData(runs: Run[], tasks: string[], reps: number[], conditi
       cells.push({ task, condition, rep, row, status: 'missing', status_code: CODE.missing });
       continue;
     }
-    const latest = match.slice().sort((a, b) => String(a.run_id).localeCompare(String(b.run_id))).at(-1)!;
+    const sorted = match.slice().sort((a, b) => String(a.run_id).localeCompare(String(b.run_id)));
+    const latest = sorted[sorted.length - 1]; // .at(-1) isn't in the ES2020 type lib
     const skipped = String((latest as { status?: unknown }).status ?? '').toLowerCase() === 'skipped';
     const status: Status = skipped ? 'skipped' : latest.success ? 'success' : 'failed';
     cells.push({

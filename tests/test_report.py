@@ -21,27 +21,78 @@ def test_generate_report(tmp_path):
     text = Path(rep).read_text()
     assert "Prefix-cache" in text or "cache_accumulation" in text
     assert "| condition |" in text or "condition" in text
-    assert "[Interactive ECharts dashboard](report.html)" in text
     assert (tmp_path / "figures" / "cache_accumulation.png").exists()
-    html = tmp_path / "report.html"
-    assert html.exists()
-    page = html.read_text()
+    assert "Condition overhead vs single-agent baseline" in text
+
+    # report.html is now ONE single-page report with a masthead switcher; report.md
+    # deep-links each read into it.
+    assert '<iframe src="report.html#report=multi_agent"' in text
+    assert '<iframe src="report.html#report=long_horizon"' in text
+    assert "(report.html)" in text
+
+    page = (tmp_path / "report.html").read_text()
     assert "https://cdn.jsdelivr.net/npm/echarts" in page
     assert "echarts.init" in page
-    assert "const EXPERIMENT_DATA =" in page
+    # the chart code lives ONCE; both reports' data ride in separate JSON blocks.
     for chart_id in (
-        "matrix-chart",
-        "condition-chart",
-        "overhead-chart",
-        "efficiency-chart",
-        "cache-chart",
-        "latency-chart",
-        "run-chart",
-        "component-chart",
+        "matrix-chart", "condition-chart", "overhead-chart", "efficiency-chart",
+        "cache-chart", "latency-chart", "run-chart", "component-chart",
     ):
         assert chart_id in page
-    assert "Condition overhead vs single-agent baseline" in text
-    assert '<iframe src="report.html"' in text
+    # the switcher offers both reads, with the shared chart shell
+    assert 'class="switch-tab" data-report="multi_agent"' in page
+    assert 'class="switch-tab" data-report="long_horizon"' in page
+    assert 'id="reports-manifest"' in page
+    assert 'id="rpt-multi_agent-data"' in page
+    assert 'id="rpt-long_horizon-data"' in page
+    assert "activateReport" in page
+    # each report's data is scoped to exactly its strategies
+    assert '"conditions":["single_agent","subagents","dynamic_workflow"]' in page
+    assert '"conditions":["goal","ralph_loop","dynamic_workflow"]' in page
+    # §0 task-prompt band content for both reads is embedded in the manifest
+    assert "Tasks &amp; strategies" in page
+    assert "Fused Triton kernel" in page               # multi-agent task title
+    assert "Kernel gauntlet" in page                   # long-horizon task title
+    assert "Strategies compared" in page
+    # long-horizon is scaffolded around its (data-less) long-horizon tasks
+    assert '"tasks":["coding_longhorizon","research_longhorizon"]' in page
+
+
+def test_subreport_scopes_conditions_and_adds_task_brief(tmp_path):
+    from analysis.report_variants import VARIANTS, build_page
+
+    runs = pd.DataFrame([
+        {"run_id": "coding__single_agent__01", "task": "coding",
+         "condition": "single_agent", "rep": 1, "success": True},
+        {"run_id": "coding__goal__01", "task": "coding",
+         "condition": "goal", "rep": 1, "success": True},
+    ])
+    multi = next(v for v in VARIANTS if v["key"] == "multi_agent")
+    page = build_page(multi, runs)
+    out = render_echarts_report(
+        runs, pd.DataFrame(), pd.DataFrame(), tmp_path / "ma.html",
+        conditions=multi["conditions"], tasks=multi["tasks"], page=page,
+    )
+    s = out.read_text()
+    # goal is dropped from the comparison entirely (single/subagents/dynamic only)
+    assert '"conditions":["single_agent","subagents","dynamic_workflow"]' in s
+    assert '"condition":"goal"' not in s   # no goal run data embedded
+    # §0 band present, masthead gradient encodes the three compared conditions
+    assert "band-brief" in s and "Tasks &amp; strategies" in s
+    assert "linear-gradient(90deg, #3b5bdb" in s
+
+
+def test_default_report_has_no_task_brief_band(tmp_path):
+    runs = pd.DataFrame([{
+        "run_id": "coding__single_agent__01", "task": "coding",
+        "condition": "single_agent", "rep": 1, "success": True,
+    }])
+    s = render_echarts_report(runs, pd.DataFrame(), pd.DataFrame(), tmp_path / "r.html").read_text()
+    # the combined-report default keeps its original layout and resolves every placeholder
+    assert '<section class="band band-brief">' not in s   # no §0 band rendered
+    assert "Tasks &amp; strategies" not in s
+    assert "__BRIEF_BAND__" not in s
+    assert "__MASTHEAD_GRADIENT__" not in s
 
 
 def test_echarts_dashboard_data_includes_single_agent_overheads():
@@ -345,6 +396,28 @@ def test_echarts_report_uses_clear_request_timeline_and_context_labels(tmp_path)
     assert "requestTypeSymbols" in page
 
 
+def test_context_breakdown_has_compose_and_group_controls(tmp_path):
+    runs = pd.DataFrame([{
+        "run_id": "coding__single_agent__01", "task": "coding",
+        "condition": "single_agent", "rep": 1, "success": True,
+    }])
+    page = render_echarts_report(runs, pd.DataFrame(), pd.DataFrame(), tmp_path / "report.html").read_text()
+    # two per-panel selects: compose (source/token type) and group (agent type/none)
+    assert 'id="compose-filter"' in page
+    assert 'id="group-filter"' in page
+    assert ">token type<" in page and ">agent type<" in page
+    # the previously-unused token-bucket dataset is now wired into the renderer
+    assert "context_token_components" in page
+    assert "renderStackedContextChart" in page
+    # agent-type region bands + the clarified ordering note
+    assert "markArea" in page
+    assert "canonical context order" in page
+    # token mode excludes output and folds cache writes into one bucket
+    assert '"cache write"' in page
+    # the variable-series guard is still present on this chart
+    assert "{ notMerge: true }" in page
+
+
 def test_variable_series_charts_replace_instead_of_merge(tmp_path):
     # The cache-chart and component-chart have a series count that changes with the
     # task/run filter. ECharts setOption merges series by index by default, so when
@@ -393,12 +466,15 @@ def test_report_exposes_agent_type_and_hitrate_controls(tmp_path):
         "condition": "single_agent", "rep": 1, "success": True,
     }])
     page = render_echarts_report(runs, pd.DataFrame(), pd.DataFrame(), tmp_path / "report.html").read_text()
-    assert 'id="agent-filter"' in page                 # #4 §3 agent-type selector
-    assert 'id="cache-agent-filter"' in page           # #3 cache chart agent-type selector
+    # filters live in the left sidebar as multi-select chip groups
+    assert 'id="chips-agent"' in page                  # agent-type multi-select group
+    assert 'id="chips-condition"' in page              # condition multi-select group
+    assert 'id="sidebar"' in page                      # sticky left filter rail
     assert "cache_by_agent" in page
-    assert "context length (tokens)" in page           # #5 new x axis
-    assert "prefix cache hit rate (%)" in page         # #5 new y axis
-    assert 'id="context-texts"' in page                # #2 text block present (empty ok)
+    assert "context length (tokens)" in page           # scatter x axis
+    assert "prefix cache hit rate (%)" in page         # scatter y axis
+    assert 'id="reports-manifest"' in page             # report manifest present
+    assert 'id="rpt-report-texts"' in page             # per-report context-text block
 
 
 def test_context_text_panel_embeds_provided_text(tmp_path):
@@ -438,3 +514,49 @@ def test_tap_component_texts_marks_stable_and_volatile():
     # varies per turn -> emitted per request, not stable
     assert len(user_rows) == 2 and all(r["stable"] is False for r in user_rows)
     assert {r["text"] for r in user_rows} == {"first question", "second question"}
+
+
+def test_recompute_est_tokens_density_weighted_keeps_totals_exact():
+    from analysis.build_tables import _recompute_est_tokens
+    # 14 requests, two categories with different real densities (A denser than B).
+    # The provided est_tokens are uniform byte-proportional (what tap_components emits).
+    rows = []
+    for i in range(14):
+        a_bytes, b_bytes = 1000 + i, 1000 + 100 * i
+        total = round(a_bytes * 0.4 + b_bytes * 0.2)
+        s = a_bytes + b_bytes
+        ea = round(a_bytes / s * total)
+        rows += [
+            {"run_id": "r", "request_index": i, "component": "A", "bytes": a_bytes, "est_tokens": ea},
+            {"run_id": "r", "request_index": i, "component": "B", "bytes": b_bytes, "est_tokens": total - ea},
+        ]
+    df = pd.DataFrame(rows)
+    out, coef = _recompute_est_tokens(df)
+    assert coef and coef["A"] > coef["B"]          # recovered: A is denser per byte
+    # per-request totals stay EXACTLY the same (still anchored to the measured total)
+    new = out.groupby(["run_id", "request_index"])["est_tokens"].sum()
+    old = df.groupby(["run_id", "request_index"])["est_tokens"].sum()
+    assert (new == old).all()
+    # the split shifted toward A (denser) vs the uniform byte-proportional split
+    a_new = out[(out["request_index"] == 13) & (out["component"] == "A")]["est_tokens"].iloc[0]
+    a_old = df[(df["request_index"] == 13) & (df["component"] == "A")]["est_tokens"].iloc[0]
+    assert a_new > a_old
+
+
+def test_drilldown_charts_grouped_axis_and_context_length(tmp_path):
+    runs = pd.DataFrame([{
+        "run_id": "coding__single_agent__01", "task": "coding",
+        "condition": "single_agent", "rep": 1, "success": True,
+    }])
+    page = render_echarts_report(runs, pd.DataFrame(), pd.DataFrame(), tmp_path / "r.html").read_text()
+    # shared §3 grouping helpers + second agent-type axis + fixed context-length range
+    for s in ("function orderedRequests", "function groupedXAxis", "contextLengthMax",
+              "runTokenMax", '"context length (tokens)"'):
+        assert s in page, s
+    # the run chart now reads the shared group toggle (same as the component chart)
+    assert page.count('group-filter") || {}).value') >= 2
+    # KPIs on one row; baseline tag on its own line
+    assert "grid-template-columns:repeat(5" in page
+    assert ".strat-line" in page
+    # honest note: total exact, split data-calibrated, count_tokens as the exact path
+    assert "data-calibrated estimate" in page and "count_tokens API" in page

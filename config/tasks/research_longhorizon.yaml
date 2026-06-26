@@ -1,0 +1,16 @@
+name: research_longhorizon
+prompt_file: tasks/research_longhorizon/prompt.md
+workspace: null
+workspace_seed: null
+kind: research
+required_sections:
+  - vLLM
+  - TensorRT-LLM
+  - SGLang
+  - TGI
+  - LMDeploy
+  - DeepSpeed-MII
+  - llama.cpp
+  - MLC-LLM
+  - Comparison Matrix
+  - Tradeoffs & Recommendations

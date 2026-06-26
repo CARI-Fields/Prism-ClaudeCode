@@ -9,7 +9,8 @@ from analysis.plots.cache_accumulation import plot_cache_accumulation
 from analysis.plots.context_growth import plot_context_growth
 from analysis.plots.latency import plot_latency
 from analysis.plots.success_speedup import plot_success_speedup
-from analysis.echarts_report import render_echarts_report
+from analysis.echarts_report import render_combined_report
+from analysis.report_variants import VARIANTS, build_page
 
 
 def generate(raw_dir, processed_dir, figures_dir, report_path) -> Path:
@@ -40,7 +41,17 @@ def generate(raw_dir, processed_dir, figures_dir, report_path) -> Path:
     plot_context_growth(comps, figures_dir / "context_growth.png")
     plot_latency(turns, figures_dir / "latency.png")
     plot_success_speedup(runs, figures_dir / "success_speedup.png")
-    html_report = render_echarts_report(runs, turns, comps, report_path.with_suffix(".html"), comp_texts)
+
+    # One single-page report.html holding both condition-scoped reads; a masthead
+    # switcher flips between them client-side.
+    report_specs = [
+        {"key": v["key"], "conditions": v["conditions"], "tasks": v["tasks"],
+         "page": build_page(v, runs)}
+        for v in VARIANTS
+    ]
+    spa_report = render_combined_report(
+        runs, turns, comps, report_path.with_suffix(".html"), comp_texts, reports=report_specs,
+    )
 
     cols = [c for c in ("run_id", "task", "condition", "success", "speedup",
                         "research_rubric_score", "quality_score",
@@ -97,8 +108,9 @@ def generate(raw_dir, processed_dir, figures_dir, report_path) -> Path:
              "## ECharts chart plan\n",
              *chart_plan,
              "\n## Interactive ECharts dashboard\n",
-             f"[Interactive ECharts dashboard]({html_report.name})\n",
-             f'<iframe src="{html_report.name}" width="100%" height="1400" title="Interactive ECharts dashboard"></iframe>\n',
+             f"One single-page report with a masthead switcher: [{spa_report.name}]({spa_report.name}). "
+             "Each condition-scoped read is deep-linkable:\n",
+             *_dashboard_sections(spa_report.name),
              "## Cost and quality scoring\n",
              "Costs are estimated API-equivalent Claude Sonnet 4.6 token costs from the captured token categories: base input, 5m cache writes, 1h cache writes, cache reads, and output. Non-token add-on fees, if any, are not included.\n",
              "Coding quality is the KernelGYM `speedup` for successful runs. Research quality is a deterministic rubric score over required sections, citation balance, length, and lightweight keyword coverage.\n",
@@ -117,6 +129,19 @@ def generate(raw_dir, processed_dir, figures_dir, report_path) -> Path:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text("\n".join(lines))
     return report_path
+
+
+def _dashboard_sections(spa_name: str) -> list[str]:
+    lines: list[str] = []
+    for variant in VARIANTS:
+        title = variant["title"]
+        href = f"{spa_name}#report={variant['key']}"
+        lines.append(f"### {title}\n")
+        lines.append(f"[{title}]({href})\n")
+        lines.append(
+            f'<iframe src="{href}" width="100%" height="1400" title="{title}"></iframe>\n'
+        )
+    return lines
 
 
 def _condition_summary(runs: pd.DataFrame) -> pd.DataFrame:

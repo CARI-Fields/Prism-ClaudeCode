@@ -20,5 +20,5 @@ ESCAPED_PROMPT="${ESCAPED_PROMPT//\"/\\\"}"
 ESCAPED_PROMPT="${ESCAPED_PROMPT//\$/\\$}"
 ESCAPED_PROMPT="${ESCAPED_PROMPT//\`/\\\`}"
 
-PROMPT="/ralph-loop \"$ESCAPED_PROMPT\" --max-iterations $ITERS --completion-promise RALPH_DONE"
+PROMPT="/ralph-loop:ralph-loop \"$ESCAPED_PROMPT\" --max-iterations $ITERS --completion-promise RALPH_DONE"
 "$HERE/../capture/run_tap.sh" -- --plugin-dir "$RALPH_PLUGIN_DIR" --model "$MODEL" -p "$PROMPT"

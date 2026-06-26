@@ -10,8 +10,10 @@ from analysis.parse.parse_tap import (
 )
 from analysis.parse.parse_ttft import load_ttft, join_ttft
 from analysis.parse.parse_meta import run_summary
+from analysis.parse.tokenizer import fit_category_token_rates, scale_to_total
 from analysis.pricing import enrich_turn_costs, token_cost_summary
 from analysis.research_rubric import score_research_report
+from harness.score.score_coding import gauntlet_success
 
 
 def cache_summary(turns: list[dict]) -> dict:
@@ -68,16 +70,23 @@ def build_run(run_dir: Path):
                                    for t in turns), default=0),
         "output_tokens_total": sum(t["output_tokens"] for t in turns),
     })
-    if summary.get("task") == "research":
-        summary.update(score_research_report(run_dir / "workspace" / "report.md"))
+    task_name = summary.get("task") or ""
+    if task_name.startswith("research"):
+        summary.update(score_research_report(run_dir / "workspace" / "report.md", profile=task_name))
+    # Gauntlet runs (score carries num_kernels) no longer gate on the geomean target:
+    # success == every kernel correct. Recompute from the stored per-kernel verdicts so
+    # the report reflects the current criterion without re-scoring against KernelGYM.
+    score = meta.get("score") or {}
+    if score.get("num_kernels") is not None:
+        summary["success"] = gauntlet_success(score.get("passing_kernels"), score.get("num_kernels"))
     summary.update(_quality_summary(summary))
     return turns, comps, summary, comp_texts
 
 
 def _quality_summary(summary: dict) -> dict:
     cost = _number(summary.get("total_cost_usd"))
-    task = summary.get("task")
-    if task == "coding":
+    task = summary.get("task") or ""
+    if task.startswith("coding"):
         speedup = _number(summary.get("speedup"))
         quality = speedup if bool(summary.get("success")) else 0.0
         return {
@@ -87,7 +96,7 @@ def _quality_summary(summary: dict) -> dict:
             "speedup_per_dollar": _safe_div(quality, cost),
             "cost_efficiency_score": _safe_div(quality, cost),
         }
-    if task == "research":
+    if task.startswith("research"):
         quality = _number(summary.get("research_rubric_score"))
         return {
             "quality_metric": "research_rubric_score",
@@ -135,9 +144,51 @@ def build_all(raw_dir: Path, out_dir: Path) -> dict:
         all_turns += t; all_comps += c; all_runs.append(r); all_texts += x
     if not all_runs:
         return {"turns": 0, "components": 0, "runs": 0}
+    comps_df = pd.DataFrame(all_comps)
+    comps_df, token_rates = _recompute_est_tokens(comps_df)
+    if token_rates:
+        (out_dir / "token_rates.json").write_text(json.dumps(token_rates, indent=2))
     pd.DataFrame(all_turns).to_parquet(out_dir / "turns.parquet")
-    pd.DataFrame(all_comps).to_parquet(out_dir / "components.parquet")
+    comps_df.to_parquet(out_dir / "components.parquet")
     pd.DataFrame(all_runs).to_parquet(out_dir / "runs.parquet")
     pd.DataFrame(all_texts).to_parquet(out_dir / "component_texts.parquet")
     return {"turns": len(all_turns), "components": len(all_comps),
             "runs": len(all_runs), "component_texts": len(all_texts)}
+
+
+def _recompute_est_tokens(comps_df: pd.DataFrame):
+    """Replace the uniform byte-proportional `est_tokens` with a density-weighted split.
+
+    Fits per-category tokens-per-byte across every request (the exact total is the sum
+    of the existing uniform-scaled `est_tokens`), then for each request re-distributes
+    that exact total by ``bytes × coef`` — keeping per-request totals exact while making
+    the split density-aware. Falls back to the uniform values when the fit is degenerate
+    (e.g. the sparse long-horizon framework). Returns (comps_df, token_rates)."""
+    if comps_df.empty or not {"run_id", "request_index", "component", "bytes",
+                              "est_tokens"} <= set(comps_df.columns):
+        return comps_df, {}
+    bytes_by_req: dict[tuple, dict[str, float]] = {}
+    totals: dict[tuple, float] = {}
+    for row in comps_df.itertuples():
+        key = (row.run_id, row.request_index)
+        bytes_by_req.setdefault(key, {})[row.component] = float(row.bytes or 0)
+        totals[key] = totals.get(key, 0.0) + float(row.est_tokens or 0)
+    keys = list(bytes_by_req)
+    coef = fit_category_token_rates([bytes_by_req[k] for k in keys],
+                                    [totals[k] for k in keys])
+    if not coef:
+        return comps_df, {}
+    new_est: dict[tuple, int] = {}
+    for key in keys:
+        parts = bytes_by_req[key]
+        weighted = {c: parts[c] * coef.get(c, 0.0) for c in parts}
+        if sum(weighted.values()) <= 0:
+            weighted = dict(parts)  # category has no fitted density — keep raw bytes
+        for comp, val in scale_to_total(weighted, int(round(totals[key]))).items():
+            new_est[(key[0], key[1], comp)] = val
+    comps_df = comps_df.copy()
+    comps_df["est_tokens"] = [
+        new_est.get((r.run_id, r.request_index, r.component), r.est_tokens)
+        for r in comps_df.itertuples()
+    ]
+    return comps_df, {c: round(v, 6) for c, v in coef.items()}

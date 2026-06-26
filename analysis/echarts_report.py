@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html as _html
 import json
 import math
 from datetime import datetime, timezone
@@ -14,6 +15,20 @@ CONDITIONS = ["single_agent", "goal", "subagents", "ralph_loop", "dynamic_workfl
 TASKS = ["coding", "research"]
 REPS = [1, 2, 3]
 STATUS_CODE = {"missing": 0, "failed": 1, "success": 2, "skipped": 3}
+# Per-condition accent colors — kept in sync with `conditionColors` in the JS so the
+# masthead gradient (a Python-built CSS string) matches the in-chart series colors.
+CONDITION_COLORS = {
+    "single_agent": "#3b5bdb",
+    "goal": "#2f9e44",
+    "subagents": "#0c8599",
+    "ralph_loop": "#e8590c",
+    "dynamic_workflow": "#7048e8",
+    "loop_dynamic": "#c2255c",
+}
+# Default masthead gradient for the combined report (section accents, not conditions).
+_DEFAULT_GRADIENT = (
+    "linear-gradient(90deg, #3b5bdb 0 33.33%, #0c8599 33.33% 66.66%, #e8590c 66.66% 100%) 1"
+)
 OVERHEAD_METRICS = [
     ("completion_time_factor", "mean_completion_time_s"),
     ("num_requests_factor", "mean_num_requests"),
@@ -30,12 +45,49 @@ def render_echarts_report(
     components: pd.DataFrame,
     html_path: str | Path,
     component_texts: pd.DataFrame | None = None,
+    *,
+    conditions: list[str] | None = None,
+    tasks: list[str] | None = None,
+    page: dict[str, Any] | None = None,
 ) -> Path:
+    """Render one self-contained dashboard.
+
+    ``conditions`` / ``tasks`` restrict the report to a subset (the embedded data is
+    pruned to match, so a sub-report file is smaller than the full one). ``page``
+    overrides the masthead copy and, when it carries ``task_briefs`` / ``strategies``,
+    adds the orientation band that lists each task's verbatim prompt. All three default
+    to the full combined report, so existing callers are unaffected.
+    """
+    return render_combined_report(
+        runs, turns, components, html_path, component_texts,
+        reports=[{"key": "report", "conditions": conditions, "tasks": tasks, "page": page}],
+    )
+
+
+def render_combined_report(
+    runs: pd.DataFrame,
+    turns: pd.DataFrame,
+    components: pd.DataFrame,
+    html_path: str | Path,
+    component_texts: pd.DataFrame | None = None,
+    *,
+    reports: list[dict[str, Any]],
+) -> Path:
+    """Render ONE self-contained single-page report holding every entry in ``reports``.
+
+    Each entry is ``{key, conditions, tasks, page}``. A switcher in the masthead flips
+    between them client-side; every report's data + context-texts are embedded as JSON
+    and parsed on demand, so the shared chart code lives once. When ``reports`` has a
+    single entry the switcher is hidden — that is the path the existing single-report
+    callers (and tests) take via ``render_echarts_report``."""
     html_path = Path(html_path)
-    data = build_dashboard_data(runs, turns, components)
-    texts = _context_text_map(component_texts)
+    payloads = [
+        _report_payload(runs, turns, components, component_texts,
+                        r["key"], r.get("conditions"), r.get("tasks"), r.get("page"))
+        for r in reports
+    ]
     html_path.parent.mkdir(parents=True, exist_ok=True)
-    html_path.write_text(_render_html(data, texts), encoding="utf-8")
+    html_path.write_text(_render_spa_html(payloads), encoding="utf-8")
     return html_path
 
 
@@ -66,25 +118,37 @@ def build_dashboard_data(
     runs: pd.DataFrame,
     turns: pd.DataFrame,
     components: pd.DataFrame,
+    conditions: list[str] | None = None,
+    tasks: list[str] | None = None,
 ) -> dict[str, Any]:
-    runs = runs.copy()
-    turns = turns.copy()
-    components = components.copy()
+    conditions = list(conditions) if conditions is not None else CONDITIONS
+    tasks = list(tasks) if tasks is not None else TASKS
+    runs = _scope_rows(runs, conditions, tasks)
+    turns = _scope_rows(turns, conditions, tasks)
+    components = _scope_rows(components, conditions, tasks)
     for df in (runs, turns, components):
         if "rep" in df.columns:
             df["rep"] = pd.to_numeric(df["rep"], errors="coerce").astype("Int64")
-    condition_metrics = _condition_metrics(runs, turns)
+    condition_metrics = _condition_metrics(runs, turns, conditions, tasks)
     turn_records = _turn_records(turns)
+    # Only surface reps that actually exist in this report's data — a long-horizon
+    # report has a single rep, so r2 / r3 must not appear as dead sidebar chips or
+    # all-missing matrix rows.
+    present_reps = (
+        sorted({int(r) for r in runs["rep"].dropna().tolist()})
+        if ("rep" in runs.columns and not runs.empty)
+        else []
+    ) or list(REPS)
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "conditions": CONDITIONS,
-        "tasks": TASKS,
-        "reps": REPS,
-        "matrix_rows": _matrix_rows(),
-        "matrix": _matrix(runs),
+        "conditions": conditions,
+        "tasks": tasks,
+        "reps": present_reps,
+        "matrix_rows": _matrix_rows(tasks, present_reps),
+        "matrix": _matrix(runs, conditions, tasks, present_reps),
         "condition_metrics": condition_metrics,
-        "condition_overheads": _condition_overheads(condition_metrics),
+        "condition_overheads": _condition_overheads(condition_metrics, tasks),
         "runs": _run_records(runs),
         "turns": turn_records,
         "cache_timeline": _cache_timeline_records(turn_records),
@@ -95,18 +159,34 @@ def build_dashboard_data(
     }
 
 
-def _matrix_rows() -> list[str]:
-    return [f"{task} r{rep}" for task in TASKS for rep in REPS]
+def _scope_rows(df: pd.DataFrame, conditions: list[str], tasks: list[str]) -> pd.DataFrame:
+    """Keep only rows whose condition and task are in the report's subset.
+
+    A copy is always returned so callers can mutate freely. Rows missing either
+    column are kept (they predate the split and have nothing to filter on)."""
+    out = df.copy()
+    if not out.empty and "condition" in out.columns:
+        out = out[out["condition"].isin(conditions)]
+    if not out.empty and "task" in out.columns:
+        out = out[out["task"].isin(tasks)]
+    return out.copy()
 
 
-def _matrix(runs: pd.DataFrame) -> list[dict[str, Any]]:
+def _matrix_rows(tasks: list[str], reps: list[int] | None = None) -> list[str]:
+    reps = reps if reps is not None else REPS
+    return [f"{task} r{rep}" for task in tasks for rep in reps]
+
+
+def _matrix(runs: pd.DataFrame, conditions: list[str], tasks: list[str],
+            reps: list[int] | None = None) -> list[dict[str, Any]]:
+    reps = reps if reps is not None else REPS
     rows = []
-    matrix_rows = _matrix_rows()
-    for task in TASKS:
-        for rep in REPS:
+    matrix_rows = _matrix_rows(tasks, reps)
+    for task in tasks:
+        for rep in reps:
             row_label = f"{task} r{rep}"
             row_index = matrix_rows.index(row_label)
-            for condition_index, condition in enumerate(CONDITIONS):
+            for condition_index, condition in enumerate(conditions):
                 match = _filter_eq(_filter_eq(_filter_eq(runs, "task", task), "condition", condition), "rep", rep)
                 if match.empty:
                     status = "missing"
@@ -136,10 +216,12 @@ def _matrix(runs: pd.DataFrame) -> list[dict[str, Any]]:
     return rows
 
 
-def _condition_metrics(runs: pd.DataFrame, turns: pd.DataFrame) -> list[dict[str, Any]]:
+def _condition_metrics(
+    runs: pd.DataFrame, turns: pd.DataFrame, conditions: list[str], tasks: list[str]
+) -> list[dict[str, Any]]:
     rows = []
-    for task in ["all", *TASKS]:
-        for condition in CONDITIONS:
+    for task in ["all", *tasks]:
+        for condition in conditions:
             rgroup = _filter_eq(runs, "condition", condition)
             tgroup = _filter_eq(turns, "condition", condition)
             if task != "all":
@@ -180,9 +262,11 @@ def _metric_row(task: str, condition: str, runs: pd.DataFrame, turns: pd.DataFra
     }
 
 
-def _condition_overheads(condition_metrics: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _condition_overheads(
+    condition_metrics: list[dict[str, Any]], tasks: list[str]
+) -> list[dict[str, Any]]:
     rows = []
-    for task in ["all", *TASKS]:
+    for task in ["all", *tasks]:
         task_rows = [row for row in condition_metrics if row.get("task") == task]
         baseline = next((row for row in task_rows if row.get("condition") == "single_agent"), None)
         for row in task_rows:
@@ -438,12 +522,162 @@ def _clean(value: Any) -> Any:
     return value
 
 
-def _render_html(data: dict[str, Any], texts: dict[str, Any] | None = None) -> str:
-    data_json = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    texts_json = json.dumps(texts or {}, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+_DEFAULT_PAGE = {
+    "eyebrow": "Claude Code · context &amp; cache experiment",
+    "title": "Orchestration telemetry",
+    "lede": (
+        "Five orchestration strategies &mdash; single agent, subagents, ralph loop, "
+        "dynamic workflow, and loop&nbsp;+&nbsp;dynamic &mdash; across coding and research "
+        "tasks, three runs each. Generated <span id=\"generated-at\"></span>."
+    ),
+}
+
+
+def _report_payload(
+    runs: pd.DataFrame,
+    turns: pd.DataFrame,
+    components: pd.DataFrame,
+    component_texts: pd.DataFrame | None,
+    key: str,
+    conditions: list[str] | None,
+    tasks: list[str] | None,
+    page: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Build one report's embed payload: scoped data + context-texts + the masthead copy
+    and §0 brief-band HTML the switcher injects when this report becomes active."""
+    conditions = list(conditions) if conditions is not None else CONDITIONS
+    tasks = list(tasks) if tasks is not None else TASKS
+    data = build_dashboard_data(runs, turns, components, conditions=conditions, tasks=tasks)
+    # Prune the context-text blob to the same subset so a report only carries the
+    # previews for runs it can actually display.
+    scoped_texts = _scope_rows(component_texts, conditions, tasks) if component_texts is not None else None
+    texts = _context_text_map(scoped_texts)
+    page = {**_DEFAULT_PAGE, **(page or {})}
+    lede = page["lede"]
+    if "generated-at" not in lede:
+        lede = f'{lede} Generated <span id="generated-at"></span>.'
+    gradient = _masthead_gradient(conditions) if page.get("scope_gradient") else _DEFAULT_GRADIENT
+    return {
+        "key": key,
+        "title": page["title"],
+        "eyebrow": page["eyebrow"],
+        "lede": lede,
+        "gradient": gradient,
+        "brief_html": _brief_band_html(page),
+        "data": data,
+        "texts": texts,
+    }
+
+
+def _json_embed(obj: Any) -> str:
+    return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+
+
+def _render_spa_html(payloads: list[dict[str, Any]]) -> str:
+    blocks = []
+    manifest = []
+    for p in payloads:
+        data_id = f"rpt-{p['key']}-data"
+        texts_id = f"rpt-{p['key']}-texts"
+        blocks.append(f'<script type="application/json" id="{data_id}">{_json_embed(p["data"])}</script>')
+        blocks.append(f'<script type="application/json" id="{texts_id}">{_json_embed(p["texts"])}</script>')
+        manifest.append({
+            "key": p["key"], "title": p["title"], "eyebrow": p["eyebrow"],
+            "lede": p["lede"], "gradient": p["gradient"], "briefHtml": p["brief_html"],
+            "dataId": data_id, "textsId": texts_id,
+        })
+    multi = len(payloads) > 1
+    switcher = "".join(
+        f'<button type="button" class="switch-tab" data-report="{p["key"]}">{p["title"]}</button>'
+        for p in payloads
+    )
     return (_HTML_TEMPLATE
-            .replace("__EXPERIMENT_DATA_JSON__", data_json)
-            .replace("__CONTEXT_TEXTS_JSON__", texts_json))
+            .replace("__REPORT_BLOCKS__", "\n  ".join(blocks))
+            .replace("__REPORTS_MANIFEST__", _json_embed(manifest))
+            .replace("__SWITCHER__", switcher)
+            .replace("__SWITCHER_HIDDEN__", "" if multi else " hidden"))
+
+
+def _masthead_gradient(conditions: list[str] | None) -> str:
+    """A hard-stop gradient built from the report's compared conditions, so the chrome
+    encodes which strategies the page is about (single → subagents → workflow, etc.)."""
+    colors = [CONDITION_COLORS.get(c, "#5c6675") for c in (conditions or [])] or ["#5c6675"]
+    n = len(colors)
+    stops = []
+    for i, color in enumerate(colors):
+        start = round(100 * i / n, 2)
+        end = round(100 * (i + 1) / n, 2)
+        stops.append(f"{color} {start}% {end}%")
+    return f"linear-gradient(90deg, {', '.join(stops)}) 1"
+
+
+def _brief_band_html(page: dict[str, Any]) -> str:
+    """Orientation band: each task as a spec sheet with its verbatim prompt, plus the
+    legend of strategies being compared. Returns '' when the page declares neither, so
+    the combined report keeps its original layout."""
+    briefs = page.get("task_briefs") or []
+    strategies = page.get("strategies") or []
+    if not briefs and not strategies:
+        return ""
+
+    cards = []
+    for brief in briefs:
+        n = _html.escape(str(brief.get("n", "")))
+        task = _html.escape(str(brief.get("task", "")))
+        title = _html.escape(str(brief.get("title", "")))
+        measures = _html.escape(str(brief.get("measures", "")))
+        source = _html.escape(str(brief.get("source", "")))
+        prompt = _html.escape(str(brief.get("prompt", "")))
+        has_data = brief.get("has_data", True)
+        status = (
+            '<span class="brief-status live">data captured</span>' if has_data
+            else '<span class="brief-status pending">awaiting sweep</span>'
+        )
+        cards.append(f"""
+        <article class="brief">
+          <header class="brief-head">
+            <span class="brief-no">{n}</span>
+            <div class="brief-title">
+              <span class="brief-task">{task}</span>
+              <h3>{title}</h3>
+            </div>
+            {status}
+          </header>
+          <p class="brief-measures">{measures}</p>
+          <div class="brief-prompt">
+            <div class="brief-prompt-bar"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span><span class="brief-path">{source}</span></div>
+            <pre class="brief-prompt-body">{prompt}</pre>
+          </div>
+        </article>""")
+
+    strat_html = ""
+    if strategies:
+        chips = []
+        for strat in strategies:
+            color = CONDITION_COLORS.get(strat.get("condition", ""), "#5c6675")
+            label = _html.escape(str(strat.get("label", strat.get("condition", ""))))
+            desc = _html.escape(str(strat.get("desc", "")))
+            baseline = '<span class="strat-base">baseline</span>' if strat.get("baseline") else ""
+            chips.append(f"""
+            <div class="strat">
+              <span class="strat-dot" style="background:{color}"></span>
+              <div class="strat-text"><div class="strat-line"><b>{label}</b>{baseline}</div><span>{desc}</span></div>
+            </div>""")
+        strat_html = f"""
+        <div class="strat-legend">
+          <div class="strat-legend-head">Strategies compared</div>
+          <div class="strat-grid">{''.join(chips)}</div>
+        </div>"""
+
+    return f"""
+    <section class="band band-brief">
+      <div class="band-head">
+        <div class="band-label"><span class="band-no">&sect;0</span>Tasks &amp; strategies</div>
+        <div class="band-scope">What each run is asked to do &middot; the verbatim task prompt and the strategies under comparison</div>
+      </div>
+      <div class="brief-grid">{''.join(cards)}</div>{strat_html}
+    </section>
+"""
 
 
 _HTML_TEMPLATE = """<!doctype html>
@@ -474,6 +708,12 @@ _HTML_TEMPLATE = """<!doctype html>
       border-image:linear-gradient(90deg, var(--agg) 0 33.33%, var(--dist) 33.33% 66.66%, var(--run) 66.66% 100%) 1;
     }
     .masthead-inner { max-width:var(--maxw); margin:0 auto; padding:26px 28px 22px; display:flex; gap:24px 32px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; }
+    .switcher { display:flex; gap:7px; flex-wrap:wrap; }
+    .switcher[hidden] { display:none; }
+    .switch-tab { font-family:var(--mono); font-size:12px; letter-spacing:.02em; color:var(--muted); background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:7px 13px; cursor:pointer; transition:all .12s ease; }
+    .switch-tab:hover { color:var(--ink); border-color:var(--muted); }
+    .switch-tab.on { color:#fff; background:var(--ink); border-color:var(--ink); }
+    .switch-tab:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
     .eyebrow { font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
     h1 { margin:7px 0 9px; font-size:27px; font-weight:700; letter-spacing:-.01em; }
     .lede { margin:0; color:var(--muted); max-width:780px; }
@@ -483,7 +723,34 @@ _HTML_TEMPLATE = """<!doctype html>
     select { font-family:var(--mono); font-size:13px; text-transform:none; letter-spacing:0; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:7px 10px; min-height:36px; }
     select:hover { border-color:var(--scope, var(--agg)); }
     select:focus-visible { outline:2px solid var(--scope, var(--agg)); outline-offset:1px; }
-    main { max-width:var(--maxw); margin:0 auto; padding:24px 28px 56px; }
+    main { max-width:var(--maxw); margin:0 auto; padding:20px 28px 56px; }
+    .fstrip { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; margin:0 0 14px; padding:10px 12px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); }
+    .fstrip-global { position:sticky; top:0; z-index:20; }
+    .fchunk { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+    .fchunk-tag { font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink); font-weight:600; }
+    .fchunk .ftoggle { font-family:var(--mono); font-size:10px; color:var(--muted); cursor:pointer; }
+    .fchunk .ftoggle:hover { color:var(--agg); text-decoration:underline; }
+    main { min-width:0; }
+    .sidebar { position:sticky; top:14px; align-self:start; max-height:calc(100vh - 28px); overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 14px 16px; font-family:var(--sans); }
+    .sb-top { display:flex; align-items:center; justify-content:space-between; margin:0 0 10px; }
+    .sb-title { font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+    .sb-reset { font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); background:none; border:1px solid var(--line); border-radius:6px; padding:3px 8px; cursor:pointer; }
+    .sb-reset:hover { color:var(--ink); border-color:var(--muted); }
+    .fgroup { margin:0 0 13px; }
+    .fhead { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:0 0 6px; }
+    .fhead .name { font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink); font-weight:600; }
+    .fhead .ftoggle { font-family:var(--mono); font-size:10px; letter-spacing:.03em; color:var(--muted); cursor:pointer; }
+    .fhead .ftoggle:hover { color:var(--agg); text-decoration:underline; }
+    .chips { display:flex; flex-wrap:wrap; gap:5px; }
+    .chip { display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:11.5px; color:var(--muted); background:var(--paper); border:1px solid var(--line); border-radius:999px; padding:3px 9px; cursor:pointer; user-select:none; transition:all .12s ease; }
+    .chip:hover { border-color:var(--muted); color:var(--ink); }
+    .chip.on { color:#fff; background:var(--agg); border-color:var(--agg); }
+    .chip .dot { width:9px; height:9px; border-radius:50%; flex:none; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12); }
+    .chip .gly { font-size:12px; line-height:1; }
+    .chip.on .dot { box-shadow:inset 0 0 0 1px rgba(255,255,255,.5); }
+    .sb-divider { height:1px; background:var(--line); margin:4px 0 13px; }
+    .sb-view .control { margin:0 0 11px; }
+    .sb-view select { width:100%; }
     .band { --scope:var(--agg); margin:0 0 30px; }
     .band-agg { --scope:var(--agg); } .band-dist { --scope:var(--dist); } .band-run { --scope:var(--run); }
     .band-head { display:flex; align-items:center; justify-content:space-between; gap:10px 18px; flex-wrap:wrap; padding:2px 0 12px 14px; border-left:3px solid var(--scope); }
@@ -492,7 +759,7 @@ _HTML_TEMPLATE = """<!doctype html>
     .band-scope { font-family:var(--mono); font-size:11.5px; letter-spacing:.03em; color:var(--muted); }
     .band-scope.row { padding:0 0 14px 14px; }
     .scope-tag { display:inline-block; font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--scope); border:1px solid color-mix(in srgb, var(--scope) 32%, var(--line)); background:color-mix(in srgb, var(--scope) 7%, #fff); padding:4px 10px; border-radius:999px; margin:0 0 14px 14px; }
-    .kpis { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; }
+    .kpis { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:14px; }
     .kpi { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); border-left:3px solid var(--scope); padding:14px 16px; }
     .kpi .label { font-family:var(--mono); font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
     .kpi .value { margin-top:7px; font-family:var(--mono); font-size:26px; font-weight:600; letter-spacing:-.01em; }
@@ -504,6 +771,9 @@ _HTML_TEMPLATE = """<!doctype html>
     h2 { margin:0; font-size:14.5px; font-weight:600; }
     .control.inline { display:flex; flex-flow:row nowrap; align-items:center; gap:8px; }
     .control.inline select { min-height:32px; padding:5px 9px; font-size:12.5px; }
+    .control.inline input[type=range] { width:120px; accent-color:var(--muted); cursor:pointer; }
+    .control.inline.check { cursor:pointer; gap:6px; }
+    .control.inline.check input[type=checkbox] { width:15px; height:15px; accent-color:var(--ink); cursor:pointer; margin:0; }
     .control-group { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; }
     .ctx-text-panel { margin-top:12px; border:1px solid var(--line); border-radius:8px; background:#fbfcfe; overflow:hidden; }
     .ctx-text-panel .ctx-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; padding:9px 12px; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:11.5px; color:var(--muted); }
@@ -511,14 +781,54 @@ _HTML_TEMPLATE = """<!doctype html>
     .ctx-text-panel .ctx-trunc { color:#b45309; }
     .ctx-text-panel .ctx-body { margin:0; padding:11px 13px; max-height:300px; overflow:auto; white-space:pre-wrap; word-break:break-word; font-family:var(--mono); font-size:11.5px; line-height:1.5; color:var(--ink); }
     .ctx-text-panel .ctx-empty { padding:11px 13px; color:var(--muted); font-family:var(--mono); font-size:11.5px; }
+    .drilldown-runs { display:flex; flex-direction:column; gap:18px; }
+    .drilldown-run .run-tag { font-family:var(--mono); font-size:11px; color:var(--muted); }
+    .drilldown-run .drill-sub { margin:14px 0 4px; font-family:var(--mono); font-size:12px; color:var(--muted); font-weight:600; }
     .chart { width:100%; height:340px; }
     .chart.tall { height:440px; }
+    .chart.short { height:290px; }
     .note { margin:10px 0 0; color:var(--muted); font-size:12px; max-width:920px; }
     .status-key { display:flex; flex-wrap:wrap; gap:7px 16px; margin-top:10px; font-family:var(--mono); font-size:11px; color:var(--muted); }
     .status-key .chip { display:inline-flex; align-items:center; gap:6px; }
     .status-key .sw { width:12px; height:12px; border-radius:3px; border:1px solid var(--line); }
+    .cache-sub { margin:8px 0 2px; font-size:12.5px; font-weight:600; color:var(--muted); font-family:var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+    .cache-sub + .chart { margin-bottom:6px; }
+    /* ---- §0 Tasks & strategies orientation band ---- */
+    .band-brief { --scope:var(--ink); }
+    .brief-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; }
+    .brief { display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+    .brief-head { display:flex; align-items:flex-start; gap:12px; padding:15px 16px 11px; border-bottom:1px solid var(--line); }
+    .brief-no { font-family:var(--mono); font-size:12px; font-weight:600; color:#fff; background:var(--ink); border-radius:6px; padding:3px 7px; letter-spacing:.04em; flex:none; margin-top:1px; }
+    .brief-title { flex:1; min-width:0; }
+    .brief-task { display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+    .brief-title h3 { margin:3px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em; line-height:1.25; }
+    .brief-status { flex:none; font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border-radius:999px; border:1px solid var(--line); align-self:flex-start; margin-top:2px; }
+    .brief-status.live { color:#2f9e44; border-color:color-mix(in srgb, #2f9e44 36%, var(--line)); background:color-mix(in srgb, #2f9e44 8%, #fff); }
+    .brief-status.pending { color:#b45309; border-color:color-mix(in srgb, #e8590c 34%, var(--line)); background:color-mix(in srgb, #e8590c 8%, #fff); }
+    .brief-measures { margin:11px 16px 0; color:var(--ink); font-size:13px; line-height:1.45; }
+    .brief-prompt { margin:12px 14px 14px; border:1px solid var(--line); border-radius:8px; background:#0f1722; overflow:hidden; }
+    .brief-prompt-bar { display:flex; align-items:center; gap:6px; padding:8px 11px; background:#16202e; border-bottom:1px solid #243246; }
+    .brief-prompt-bar .dot-r, .brief-prompt-bar .dot-y, .brief-prompt-bar .dot-g { width:9px; height:9px; border-radius:50%; flex:none; }
+    .brief-prompt-bar .dot-r { background:#ff5f56; } .brief-prompt-bar .dot-y { background:#ffbd2e; } .brief-prompt-bar .dot-g { background:#27c93f; }
+    .brief-path { margin-left:7px; font-family:var(--mono); font-size:11px; color:#8aa0bd; letter-spacing:.02em; }
+    .brief-prompt-body { margin:0; padding:13px 14px; max-height:300px; overflow:auto; white-space:pre-wrap; word-break:break-word; font-family:var(--mono); font-size:11.5px; line-height:1.55; color:#d7e1ee; }
+    .strat-legend { margin-top:16px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px 16px; }
+    .strat-legend-head { font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:11px; }
+    .strat-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; }
+    .strat { display:flex; gap:9px; }
+    .strat-dot { width:11px; height:11px; border-radius:50%; flex:none; margin-top:3px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12); }
+    .strat-text { display:flex; flex-direction:column; min-width:0; }
+    .strat-line { display:flex; align-items:center; gap:7px; }
+    .strat-text b { font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--ink); }
+    .strat-text span { color:var(--muted); font-size:12px; line-height:1.4; margin-top:2px; }
+    .strat-base { font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:1px 6px; flex:none; }
     @media (max-width:980px) {
-      .masthead-inner, main { padding-left:16px; padding-right:16px; }
+      .brief-grid { grid-template-columns:1fr; }
+      .strat-grid { grid-template-columns:1fr; }
+      .masthead-inner { padding-left:16px; padding-right:16px; }
+      main { padding-left:16px; padding-right:16px; }
+      .sidebar { position:static; max-height:none; }
+      .sidebar .chips { gap:6px; }
       .grid { grid-template-columns:1fr; }
       .kpis { grid-template-columns:repeat(2,1fr); }
       .chart { height:300px; }
@@ -531,32 +841,33 @@ _HTML_TEMPLATE = """<!doctype html>
   </style>
 </head>
 <body>
-  <header class="masthead">
+  <header class="masthead" id="masthead">
     <div class="masthead-inner">
       <div>
-        <div class="eyebrow">Claude Code · context &amp; cache experiment</div>
-        <h1>Orchestration telemetry</h1>
-        <p class="lede">Five orchestration strategies &mdash; single agent, subagents, ralph loop, dynamic workflow, and loop&nbsp;+&nbsp;dynamic &mdash; across coding and research tasks, three runs each. Generated <span id="generated-at"></span>.</p>
+        <div class="eyebrow" id="rpt-eyebrow"></div>
+        <h1 id="rpt-title"></h1>
+        <p class="lede" id="rpt-lede"></p>
       </div>
-      <label class="control global">Task &middot; applies to everything
-        <select id="task-filter">
-          <option value="all">All tasks</option>
-          <option value="coding">Coding</option>
-          <option value="research">Research</option>
-        </select>
-      </label>
+      <nav class="switcher" id="switcher"__SWITCHER_HIDDEN__>__SWITCHER__</nav>
     </div>
   </header>
   <main>
+      <div class="fstrip fstrip-global">
+        <div class="fchunk"><span class="fchunk-tag">Task</span><span class="ftoggle" data-scope="g" data-toggle="task">all</span><div class="chips" id="chips-task"></div></div>
+      </div>
+      <div id="brief-band-host"></div>
     <section class="band band-agg">
-      <div class="scope-tag">Aggregate &middot; current task</div>
+      <div class="scope-tag">Aggregate &middot; current selection</div>
       <div class="kpis" id="kpis"></div>
     </section>
 
     <section class="band band-agg">
       <div class="band-head">
         <div class="band-label"><span class="band-no">&sect;1</span>Averages across conditions</div>
-        <div class="band-scope">Mean of the three reps &middot; follows the Task filter</div>
+        <div class="band-scope">Mean across rollouts &middot; the Experiment matrix shows every rollout</div>
+      </div>
+      <div class="fstrip">
+        <div class="fchunk"><span class="fchunk-tag">Feature</span><span class="ftoggle" data-scope="s1" data-toggle="condition">all</span><div class="chips" id="chips-s1-condition"></div></div>
       </div>
       <div class="grid">
         <article class="panel">
@@ -567,39 +878,41 @@ _HTML_TEMPLATE = """<!doctype html>
         </article>
         <article class="panel">
           <div class="panel-head"><h2>Condition comparison</h2>
-            <label class="control inline">metric
-              <select id="metric-filter">
-                <option value="mean_completion_time_s">Mean completion time (s)</option>
-                <option value="mean_num_requests">Mean requests</option>
-                <option value="mean_total_cost_usd">Mean total cost ($)</option>
-                <option value="mean_quality_score">Mean quality score</option>
-                <option value="mean_cost_efficiency_score">Mean cost efficiency</option>
-                <option value="mean_speedup">Mean coding speedup</option>
-                <option value="mean_research_rubric_score">Mean research rubric score</option>
-                <option value="mean_peak_prompt_tokens">Mean peak prompt tokens</option>
-                <option value="mean_total_cache_read">Mean cache read tokens</option>
-                <option value="mean_cache_hit_ratio">Mean cache hit ratio</option>
-                <option value="ttft_p95_s">TTFT p95 (s)</option>
-                <option value="total_p95_s">Total latency p95 (s)</option>
-                <option value="success_rate">Success rate</option>
-              </select>
-            </label>
+            <div class="control-group">
+              <label class="control inline">metric
+                <select id="metric-filter">
+                  <option value="mean_completion_time_s">Mean completion time (s)</option>
+                  <option value="mean_num_requests">Mean requests</option>
+                  <option value="mean_total_cost_usd">Mean total cost ($)</option>
+                  <option value="mean_quality_score">Mean quality score</option>
+                  <option value="mean_cost_efficiency_score">Mean cost efficiency</option>
+                  <option value="mean_speedup">Mean coding speedup</option>
+                  <option value="mean_research_rubric_score">Mean research rubric score</option>
+                  <option value="mean_peak_prompt_tokens">Mean peak prompt tokens</option>
+                  <option value="mean_total_cache_read">Mean cache read tokens</option>
+                  <option value="mean_cache_hit_ratio">Mean cache hit ratio</option>
+                  <option value="success_rate">Success rate</option>
+                </select>
+              </label>
+            </div>
           </div>
           <div id="condition-chart" class="chart"></div>
-          <p class="note">Each bar averages the selected metric across reps for one condition.</p>
+          <p class="note">Each bar averages the selected metric (set above this chart) across rollouts for one condition. With both tasks selected, bars are grouped by task. Rollout filter does not apply here (these are rollout-averaged); use the run-level panels below for per-rollout views.</p>
         </article>
-        <article class="panel">
+        <article class="panel" id="overhead-panel">
           <div class="panel-head"><h2>Overhead vs single agent</h2>
-            <label class="control inline">resource
-              <select id="overhead-filter">
-                <option value="num_requests_factor">Requests</option>
-                <option value="completion_time_factor">Completion time</option>
-                <option value="total_cost_factor">Total cost</option>
-                <option value="peak_prompt_tokens_factor">Peak prompt tokens</option>
-                <option value="total_cache_read_factor">Cache reads</option>
-                <option value="output_tokens_factor">Output tokens</option>
-              </select>
-            </label>
+            <div class="control-group">
+              <label class="control inline" id="overhead-control">resource
+                <select id="overhead-filter">
+                  <option value="num_requests_factor">Requests</option>
+                  <option value="completion_time_factor">Completion time</option>
+                  <option value="total_cost_factor">Total cost</option>
+                  <option value="peak_prompt_tokens_factor">Peak prompt tokens</option>
+                  <option value="total_cache_read_factor">Cache reads</option>
+                  <option value="output_tokens_factor">Output tokens</option>
+                </select>
+              </label>
+            </div>
           </div>
           <div id="overhead-chart" class="chart"></div>
           <p class="note">How many times more of the chosen resource a strategy spends versus single_agent (1.0&times; line).</p>
@@ -615,27 +928,21 @@ _HTML_TEMPLATE = """<!doctype html>
     <section class="band band-dist">
       <div class="band-head">
         <div class="band-label"><span class="band-no">&sect;2</span>Across all runs</div>
-        <div class="band-scope">Each line or dot is a single run &middot; follows the Task filter</div>
+        <div class="band-scope">Each line or dot is a single run &middot; scoped by this section's Feature / Rollout / Agent</div>
+      </div>
+      <div class="fstrip">
+        <div class="fchunk"><span class="fchunk-tag">Feature</span><span class="ftoggle" data-scope="s2" data-toggle="condition">all</span><div class="chips" id="chips-s2-condition"></div></div>
+        <div class="fchunk"><span class="fchunk-tag">Rollout</span><span class="ftoggle" data-scope="s2" data-toggle="rep">all</span><div class="chips" id="chips-s2-rep"></div></div>
+        <div class="fchunk"><span class="fchunk-tag">Agent</span><span class="ftoggle" data-scope="s2" data-toggle="agent">all</span><div class="chips" id="chips-s2-agent"></div></div>
       </div>
       <div class="stack">
         <article class="panel">
-          <div class="panel-head"><h2>Prefix Cache Hit Rate (accumulated)</h2>
-            <label class="control inline">agent type
-              <select id="cache-agent-filter"></select>
-            </label>
-          </div>
-          <h3 style="margin:8px 0 2px;font-size:12.5px;font-weight:600;color:var(--muted);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;">coding</h3>
-          <div id="cache-chart-coding" class="chart tall"></div>
-          <h3 style="margin:14px 0 2px;font-size:12.5px;font-weight:600;color:var(--muted);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;">research</h3>
-          <div id="cache-chart-research" class="chart tall"></div>
-          <p class="note">Accumulated prefix-cache hit rate, one line per run (not averaged) — coding and research are shown in separate panels (both always visible, independent of the Task filter above). Color = condition; line style = rep (solid r1, dashed r2, dotted r3); marker shape = agent type (main-agent ● circle, each subagent type its own shape, security-monitor ◆ diamond). The legend has one entry per condition — toggling it shows/hides all runs of that condition. Pick an agent type above to scope every run to that stream. Hover any point for the run id, agent type, request index, and cumulative cache read. The rate is computed from the raw, as-observed token counts: every reported cache read is counted, including the warm cache inherited from a shared system-prompt prefix. Note: <code>web-search-subagent</code> / <code>web-fetch-subagent</code> are server-side tool calls that carry no prefix cache (read = write = 0), so they sit flat at 0%; a genuine spawned subagent also starts at 0% on its first request (a cold cache write) and only climbs once it reads that prefix back.</p>
+          <div class="panel-head"><h2>Prefix Cache Hit Rate (accumulated)</h2></div>
+          <div id="cache-panels"></div>
+          <p class="note">Accumulated prefix-cache hit rate, one line per run (not averaged) — coding and research are shown in separate panels (each shows when its Task is selected in the sidebar). Color = condition; line style = rep (solid r1, dashed r2, dotted r3); marker shape = agent type (main-agent ● circle, each subagent type its own shape, security-monitor ◆ diamond). The legend has one entry per condition — toggling it shows/hides all runs of that condition. Pick an agent type above to scope every run to that stream. Hover any point for the run id, agent type, request index, and cumulative cache read. The rate is computed from the raw, as-observed token counts: every reported cache read is counted, including the warm cache inherited from a shared system-prompt prefix. Note: <code>web-search-subagent</code> / <code>web-fetch-subagent</code> are server-side tool calls that carry no prefix cache (read = write = 0), so they sit flat at 0%; a genuine spawned subagent also starts at 0% on its first request (a cold cache write) and only climbs once it reads that prefix back.</p>
         </article>
         <article class="panel">
-          <div class="panel-head"><h2>Prefix cache hit rate vs context length</h2>
-            <label class="control inline">agent type
-              <select id="latency-agent-filter"></select>
-            </label>
-          </div>
+          <div class="panel-head"><h2>Prefix cache hit rate vs context length</h2></div>
           <div id="latency-chart" class="chart"></div>
           <p class="note">One dot per request of the selected agent type across every run of this task. X = that request's context length (prompt tokens); Y = that request's own prefix cache hit rate (cache read ÷ context length). Marker shape encodes agent type: main-agent = small circle; each subagent type = its own shape (workflow ▲ triangle, task ■ square, web-search ★ star, web-fetch arrow, internal rounded square); security-monitor = hollow diamond. Color = condition.</p>
         </article>
@@ -645,35 +952,45 @@ _HTML_TEMPLATE = """<!doctype html>
     <section class="band band-run">
       <div class="band-head">
         <div class="band-label"><span class="band-no">&sect;3</span>Single run drilldown</div>
+      </div>
+      <div class="fstrip">
+        <div class="fchunk"><span class="fchunk-tag">Feature</span><span class="ftoggle" data-scope="s3" data-toggle="condition">all</span><div class="chips" id="chips-s3-condition"></div></div>
+        <div class="fchunk"><span class="fchunk-tag">Rollout</span><span class="ftoggle" data-scope="s3" data-toggle="rep">all</span><div class="chips" id="chips-s3-rep"></div></div>
+        <div class="fchunk"><span class="fchunk-tag">Agent</span><span class="ftoggle" data-scope="s3" data-toggle="agent">all</span><div class="chips" id="chips-s3-agent"></div></div>
         <div class="control-group">
-          <label class="control inline">run
-            <select id="run-filter"></select>
+          <label class="control inline" id="run-scale-control">bar density
+            <input type="range" id="run-scale" min="0" max="100" value="100" title="Compress bar width + gaps for sparse runs">
           </label>
-          <label class="control inline">agent type
-            <select id="agent-filter"></select>
+          <label class="control inline">compose by
+            <select id="compose-filter">
+              <option value="context">/context</option>
+              <option value="source">source (detailed)</option>
+              <option value="token">token type</option>
+            </select>
           </label>
+          <label class="control inline">group
+            <select id="group-filter">
+              <option value="agent">agent type</option>
+              <option value="none">none</option>
+            </select>
+          </label>
+          <label class="control inline check"><input type="checkbox" id="hitrate-toggle" checked>cache hit rate</label>
         </div>
       </div>
-      <div class="band-scope row">Everything below is one run, split by agent type &middot; pick a run and an agent type above.</div>
-      <div class="stack">
-        <article class="panel">
-          <div class="panel-head"><h2>Per-Run Request Cost Timeline</h2></div>
-          <div id="run-chart" class="chart"></div>
-          <p class="note">Token accounting (bars, left axis), latency (lines, right axis), and estimated request cost in the tooltip for each request of the selected agent type in the selected run.</p>
-        </article>
-        <article class="panel">
-          <div class="panel-head"><h2>Context Source Breakdown</h2></div>
-          <div id="component-chart" class="chart tall"></div>
-          <p class="note">Estimated context-window composition per request for the selected agent type, similar to the Claude Code /context breakdown. Top-aligned like a real context window: the root (base system prompt) sits at the top and the window grows downward. Click a segment to see the real text for that part.</p>
-          <div class="ctx-text-panel" id="ctx-text-panel"><div class="ctx-empty">Click a stacked segment above to view the text captured for that context part.</div></div>
-        </article>
-      </div>
+      <div class="band-scope row">One block per run in this section's Feature &times; Rollout &middot; the Agent chips scope each split. Default: the first feature's rollouts.</div>
+      <div id="drilldown-runs" class="drilldown-runs"></div>
     </section>
-  </main>
-  <script type="application/json" id="context-texts">__CONTEXT_TEXTS_JSON__</script>
+    </main>
+  __REPORT_BLOCKS__
+  <script type="application/json" id="reports-manifest">__REPORTS_MANIFEST__</script>
   <script>
-    const EXPERIMENT_DATA = __EXPERIMENT_DATA_JSON__;
-    const CONTEXT_TEXTS = (() => { try { return JSON.parse(document.getElementById("context-texts").textContent || "{}"); } catch (e) { return {}; } })();
+    // One self-contained page holding every report; the active one's data + context-texts
+    // are parsed on demand and assigned to these (reassignable) globals by activateReport().
+    const REPORTS_MANIFEST = (() => { try { return JSON.parse(document.getElementById("reports-manifest").textContent || "[]"); } catch (e) { return []; } })();
+    const REPORTS_PARSED = {};
+    let ACTIVE_REPORT = null;
+    let EXPERIMENT_DATA = { conditions: [], tasks: [], reps: [], matrix_rows: [], matrix: [], condition_metrics: [], condition_overheads: [], runs: [], turns: [], cache_by_agent: [], context_source_components: [], context_token_components: [], generated_at: "" };
+    let CONTEXT_TEXTS = {};
     const SANS = "'IBM Plex Sans', system-ui, sans-serif";
     const MONO = "'IBM Plex Mono', ui-monospace, monospace";
     const INK = "#10151d", MUTED = "#5c6675", LINE = "#dde2e9";
@@ -698,6 +1015,7 @@ _HTML_TEMPLATE = """<!doctype html>
       "task-subagent": "task-subagent",
       "web-search-subagent": "web-search-subagent",
       "web-fetch-subagent": "web-fetch-subagent",
+      "stop-condition-eval": "stop-condition-eval",
       "subagent-internal": "subagent-internal",
     };
     const requestTypeSymbols = {
@@ -707,12 +1025,14 @@ _HTML_TEMPLATE = """<!doctype html>
       "task-subagent": "rect",
       "web-search-subagent": "path://M50,5 L60.6,35.4 L92.8,36.1 L67.1,55.6 L76.4,86.4 L50,68 L23.6,86.4 L32.9,55.6 L7.2,36.1 L39.4,35.4 Z",  // star
       "web-fetch-subagent": "arrow",
+      "stop-condition-eval": "pin",
       "subagent-internal": "roundRect",
     };
     const sourceColors = {
       "base system prompt": "#3b5bdb",
       "builtin tool definitions": "#1098ad",
-      "MCP / extension tool definitions": "#0c8599",
+      "MCP / extension tool definitions": "#15aabf",
+      "custom agent definitions": "#f76707",
       "CLAUDE.md / project instructions": "#e8590c",
       "skills listing": "#7048e8",
       "invoked skill bodies": "#9775fa",
@@ -761,6 +1081,13 @@ _HTML_TEMPLATE = """<!doctype html>
     }
     function requestNumber(index) { return Number(index) + 1; }
     function requestTypeLabel(type) { return requestTypeLabels[type] || type || "main-agent"; }
+    // Full agent-type name wrapped onto two lines for the §3 group axis — keeps the whole
+    // label (no abbreviation) but ~halves its width so adjacent narrow bands don't collide.
+    function agentWrapLabel(type) {
+      const s = requestTypeLabel(type);
+      const i = s.lastIndexOf("-");
+      return i > 0 ? `${s.slice(0, i)}\\n${s.slice(i + 1)}` : s;
+    }
     function agentDotSpec(type) {
       const t = type || "main-agent";
       if (t === "main-agent") return { size: 6, hollow: false };         // solid circle
@@ -768,43 +1095,307 @@ _HTML_TEMPLATE = """<!doctype html>
       return { size: 8, hollow: false };                                 // subagents — own shape
     }
     function requestAxisLabel(row) { return `#${requestNumber(row.request_index)}\\n${requestTypeLabel(row.request_type)}`; }
-    function prettyDate(iso) { if (!iso) return ""; return String(iso).replace("T", " ").slice(0, 16) + " UTC"; }
-    function taskFilter() { return document.getElementById("task-filter").value; }
-    function filteredRuns() { const task = taskFilter(); return EXPERIMENT_DATA.runs.filter(r => task === "all" || r.task === task); }
-    function filteredTurns() { const task = taskFilter(); return EXPERIMENT_DATA.turns.filter(t => task === "all" || t.task === task); }
+    function niceCeil(x) { if (!(x > 0)) return 0; const p = Math.pow(10, Math.floor(Math.log10(x))); const n = x / p; const m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10; return m * p; }
+    // Report-global maxima so the §3 drilldown y-axes stay fixed (and comparable) as you
+    // flip through runs. Context length = the input context (excludes output); the run
+    // chart's token stack adds output.
+    function contextLengthMax() { return niceCeil(Math.max(0, ...EXPERIMENT_DATA.turns.map(t => t.prompt_tokens || 0))); }
+    function runTokenMax() { return niceCeil(Math.max(0, ...EXPERIMENT_DATA.turns.map(t => (t.prompt_tokens || 0) + (t.output_tokens || 0)))); }
+    // Shared §3 ordering: cluster the per-request x positions by agent type (grouped) or
+    // keep raw global order; number rounds 1..n WITHIN each agent-type group; surface the
+    // type as a second x-axis label so it sits above the chart, not over the bars.
+    function orderedRequests(typeByIndex, rawIndexes, at, groupMode) {
+      let indexes = rawIndexes.slice();
+      const grouped = groupMode === "agent" && at === "all";
+      if (grouped) {
+        const typeRank = t => { const k = Object.keys(requestTypeLabels).indexOf(t); return k < 0 ? 999 : k; };
+        indexes.sort((a, b) => (typeRank(typeByIndex.get(a)) - typeRank(typeByIndex.get(b))) || (a - b));
+      }
+      const bands = [];
+      indexes.forEach((i, pos) => {
+        const t = typeByIndex.get(i);
+        const last = bands[bands.length - 1];
+        if (last && last.type === t) last.endPos = pos;
+        else bands.push({ type: t, startPos: pos, endPos: pos });
+      });
+      const ordinal = new Array(indexes.length);
+      for (const g of bands) { let n = 1; for (let p = g.startPos; p <= g.endPos; p++) ordinal[p] = n++; }
+      // annotate (within-group #n + a 2nd type axis) whenever grouped OR a single agent
+      // type is selected; ungrouped "all" keeps the interleaved #N + type per tick.
+      const annotate = grouped || at !== "all";
+      // x-axis labelling: when annotating (grouped or single-agent) mark ONE centred
+      // tick per band — the band's TOTAL request count — instead of the start/end round
+      // numbers. Ungrouped "all" keeps the global request # at the first + last turn.
+      const xLabels = new Array(indexes.length).fill("");
+      const showLabel = new Array(indexes.length).fill(false);
+      if (annotate) {
+        for (const g of bands) {
+          const midPos = Math.floor((g.startPos + g.endPos) / 2);
+          xLabels[midPos] = `${g.endPos - g.startPos + 1}`;
+          showLabel[midPos] = true;
+        }
+      } else {
+        indexes.forEach((i, pos) => { xLabels[pos] = `#${requestNumber(i)}\\n${requestTypeLabel(typeByIndex.get(i))}`; });
+        if (indexes.length) { showLabel[0] = true; showLabel[indexes.length - 1] = true; }
+      }
+      const groupAxisLabels = new Array(indexes.length).fill("");
+      if (annotate) for (const g of bands) groupAxisLabels[Math.floor((g.startPos + g.endPos) / 2)] = agentWrapLabel(g.type);
+      return { indexes, bands, ordinal, annotate, grouped, xLabels, showLabel, groupAxisLabels };
+    }
+    // x-axis array for the §3 charts: a primary category axis whose labels are the
+    // within-group ordinals, plus (when annotating) a second top axis printing the agent
+    // type centered over each group — above the ticks, clear of the plot.
+    function groupedXAxis(o, position) {
+      // Primary tick axis only (within-group #n). The agent-type labels are drawn as
+      // dimension brackets via drawGroupBrackets() so they centre exactly on each band.
+      const primary = catAxis({ data: o.indexes.map(String), position: position || "top",
+        axisLabel: { ...axisLabelStyle(), fontSize: 10, interval: 0, formatter: (v, i) => (o.showLabel[i] ? o.xLabels[i] : "") } });
+      return [primary];
+    }
+    function bandTintArea(o) {
+      // alternating tint per agent-type band — the coloured column the in-plot agent-type
+      // tag sits in (see drawGroupBrackets "inside").
+      if (!(o.grouped && o.bands.length > 1)) return undefined;
+      const cats = o.indexes.map(String);
+      const tints = ["rgba(59,91,219,0.09)", "rgba(12,133,153,0.09)"];
+      return { silent: true, data: o.bands.map((g, gi) => [
+        { xAxis: cats[g.startPos], itemStyle: { color: tints[gi % tints.length] } },
+        { xAxis: cats[g.endPos] },
+      ]) };
+    }
+    // Shrink a band label to fit `availPx` of horizontal space: drop the font to a floor,
+    // then middle-truncate with an ellipsis. Keeps narrow bands from crowding.
+    function fitBandLabel(full, availPx) {
+      const CW = 0.62;                              // mono glyph advance ≈ 0.62em
+      let fs = 10, txt = full;
+      if (full.length * CW * fs > availPx) fs = Math.max(7, Math.floor(availPx / (full.length * CW)));
+      const maxChars = Math.floor(availPx / (CW * fs));
+      if (full.length > maxChars) {
+        if (maxChars >= 3) {
+          const keep = maxChars - 1, head = Math.ceil(keep / 2), tail = keep - head;
+          txt = full.slice(0, head) + "…" + (tail > 0 ? full.slice(full.length - tail) : "");
+        } else {
+          txt = full.slice(0, Math.max(1, maxChars));
+        }
+      }
+      return { txt, fs };
+    }
+    // Label each contiguous agent-type band. position "inside" (the Context Source
+    // Breakdown) tags the type just BELOW the plot box — centred under each band's
+    // tinted column, in the bottom margin above the legend; "top"/"bottom" (the run
+    // chart) draw a |─── type ───►| bracket in the axis margin. Pixel coords, redrawn on resize.
+    function drawGroupBrackets(chart, o, position) {
+      if (!chart || !o.annotate || !o.bands.length) {
+        if (chart) chart.setOption({ graphic: [] }, { replaceMerge: ["graphic"] });
+        return;
+      }
+      const cats = o.indexes.map(String);
+      const xAt = c => chart.convertToPixel({ xAxisIndex: 0 }, c);
+      const half = cats.length >= 2 ? Math.abs(xAt(cats[1]) - xAt(cats[0])) / 2 : 36;
 
-    function distAgentTypes() {
-      const present = new Set(filteredTurns().map(t => t.request_type || "main-agent"));
+      if (position === "inside") {
+        const topY = chart.convertToPixel({ yAxisIndex: 0 }, 0);
+        const botY = chart.convertToPixel({ yAxisIndex: 0 }, contextLengthMax());
+        if (!isFinite(topY) || !isFinite(botY)) return;
+        const labelY = botY + 14;                   // just BELOW the plot box, in the bottom margin
+        const els = [];
+        for (const g of o.bands) {
+          const L = xAt(cats[g.startPos]) - half;
+          const R = xAt(cats[g.endPos]) + half;
+          const mid = (L + R) / 2;
+          const fit = fitBandLabel(requestTypeLabel(g.type), Math.max(10, (R - L) - 10));
+          els.push({ type: "text", silent: true,
+            style: { x: mid, y: labelY, text: fit.txt, textAlign: "center", textVerticalAlign: "middle",
+              fill: INK, fontFamily: MONO, fontSize: fit.fs, fontWeight: 600,
+              backgroundColor: "rgba(255,255,255,0.85)", borderColor: LINE, borderWidth: 1,
+              borderRadius: 4, padding: [2, 6] } });
+        }
+        chart.setOption({ graphic: els }, { replaceMerge: ["graphic"] });
+        return;
+      }
+
+      const up = position !== "bottom";
+      const edgeY = chart.convertToPixel({ yAxisIndex: 0 }, 0);  // plot edge at value 0
+      if (!isFinite(edgeY)) return;
+      const sgn = up ? -1 : 1;
+      const lineY = edgeY + sgn * 34;          // bracket clear of the #n ticks
+      const cap = 4, pad = 6;
+      const line = (els, x1, y1, x2, y2) => els.push({ type: "line", silent: true,
+        shape: { x1, y1, x2, y2 }, style: { stroke: MUTED, lineWidth: 1 } });
+      const els = [];
+      for (const g of o.bands) {
+        const L = xAt(cats[g.startPos]) - half + pad;
+        const R = xAt(cats[g.endPos]) + half - pad;
+        const mid = (L + R) / 2;
+        line(els, L, lineY, R, lineY);                         // span  |--- ... --->|
+        line(els, L, lineY - cap, L, lineY + cap);             // left end-cap |
+        line(els, R, lineY - cap, R, lineY + cap);             // right end-cap |
+        line(els, R - 6, lineY - 3, R, lineY); line(els, R - 6, lineY + 3, R, lineY);  // ►  (right arrow only)
+        // agent-type label INLINE on the span — a panel-coloured background masks the
+        // line behind the text, giving the |--- main-agent --->| look, fitted to the band.
+        const fit = fitBandLabel(requestTypeLabel(g.type), Math.max(10, (R - L) - 22));
+        els.push({ type: "text", silent: true,
+          style: { x: mid, y: lineY, text: fit.txt, textAlign: "center", textVerticalAlign: "middle",
+            fill: INK, fontFamily: MONO, fontSize: fit.fs, fontWeight: 600,
+            backgroundColor: "#ffffff", padding: [1, 4] } });
+      }
+      chart.setOption({ graphic: els }, { replaceMerge: ["graphic"] });
+    }
+    function prettyDate(iso) { if (!iso) return ""; return String(iso).replace("T", " ").slice(0, 16) + " UTC"; }
+    // ---- shared multi-select filter state (empty set for a dimension = "all") ----
+    // Per-section selection state. Task is global; Feature/Rollout/Agent are independent per
+    // section (s1 = §1 averages, s2 = §2 across-run, s3 = §3 drilldown). An empty set means
+    // "show all" (active() fallback). §1 has no rollout/agent (matrix shows every rollout).
+    const SEL = {
+      task: new Set(),
+      s1: { condition: new Set() },
+      s2: { condition: new Set(), rep: new Set(), agent: new Set() },
+      s3: { condition: new Set(), rep: new Set(), agent: new Set() },
+    };
+    const agentGlyphs = {
+      "main-agent": "●", "security-monitor": "◆", "workflow-subagent": "▲",
+      "task-subagent": "■", "web-search-subagent": "★", "web-fetch-subagent": "➤",
+      "stop-condition-eval": "⬣", "subagent-internal": "▢",
+    };
+    // selSet(scope,dim): the Set backing a (scope,dim). scope "g" → the global SEL[dim] (task).
+    function selSet(scope, dim) { return scope === "g" ? SEL[dim] : SEL[scope][dim]; }
+    function active(scope, dim, val) { const s = selSet(scope, dim); return s.size === 0 || s.has(String(val)); }
+    const taskActive = t => active("g", "task", t);
+    function selectedTasks() { return EXPERIMENT_DATA.tasks.filter(taskActive); }
+    function selectedConditions(scope) { return EXPERIMENT_DATA.conditions.filter(c => active(scope, "condition", c)); }
+    function singleAgent(scope) { return SEL[scope].agent.size === 1 ? [...SEL[scope].agent][0] : "all"; }
+    // Agent types present given a scope's task(global)+feature+rollout selection — only types that
+    // actually appear are offered (single_agent has no subagents; coding has no web-*).
+    function presentAgentTypes(scope) {
+      const s = SEL[scope];
+      const present = new Set(EXPERIMENT_DATA.turns
+        .filter(t => taskActive(t.task) && active(scope, "condition", t.condition) && (!s.rep || active(scope, "rep", t.rep)))
+        .map(t => t.request_type || "main-agent"));
       return Object.keys(requestTypeLabels).filter(type => present.has(type));
     }
-    function populateDistAgentFilters() {
-      const opts = ["all", ...distAgentTypes()];
-      for (const id of ["cache-agent-filter", "latency-agent-filter"]) {
-        const sel = document.getElementById(id);
-        const current = sel.value;
-        sel.innerHTML = opts.map(v => `<option value="${v}">${v === "all" ? "all agent types" : requestTypeLabel(v)}</option>`).join("");
-        if (opts.includes(current)) sel.value = current;
-        else if (opts.includes("main-agent")) sel.value = "main-agent";
-        else sel.value = opts[0];
+    // runs / turns for a scope — applies only the dimensions that scope owns (§1 has no rep, so
+    // the matrix/coverage shows every rollout).
+    function runsFor(scope) {
+      const s = SEL[scope];
+      return EXPERIMENT_DATA.runs.filter(r => taskActive(r.task)
+        && (!s.condition || active(scope, "condition", r.condition))
+        && (!s.rep || active(scope, "rep", r.rep)));
+    }
+    function turnsFor(scope) {
+      const s = SEL[scope];
+      return EXPERIMENT_DATA.turns.filter(t => taskActive(t.task)
+        && (!s.condition || active(scope, "condition", t.condition))
+        && (!s.rep || active(scope, "rep", t.rep))
+        && (!s.agent || active(scope, "agent", t.request_type || "main-agent")));
+    }
+    // Default-selected state: global task = first (coding-type) task; §1 = all features; §2 = all
+    // features/rollouts/present-agents; §3 = FIRST feature + all rollouts + present-agents (so §3
+    // defaults to one feature's rollouts, not every run). Empty set still falls back to "show all".
+    // Order matters: a scope's feature/rollout must be set before seeding its agent (present types
+    // depend on them).
+    function seedDefaultFilters() {
+      const tasks = EXPERIMENT_DATA.tasks || [], conds = EXPERIMENT_DATA.conditions || [], reps = EXPERIMENT_DATA.reps || [];
+      SEL.task = new Set(tasks.length ? [String(tasks[0])] : []);
+      SEL.s1.condition = new Set(conds.map(String));
+      SEL.s2.condition = new Set(conds.map(String)); SEL.s2.rep = new Set(reps.map(String));
+      SEL.s3.condition = new Set(conds.length ? [String(conds[0])] : []); SEL.s3.rep = new Set(reps.map(String));
+      SEL.s2.agent = new Set(presentAgentTypes("s2").map(String));
+      SEL.s3.agent = new Set(presentAgentTypes("s3").map(String));
+    }
+    // Every chip row, keyed by (scope,dim). Agent rows scope to presentAgentTypes(scope).
+    const STRIPS = [
+      { scope: "g",  dim: "task",      id: "chips-task",         values: () => EXPERIMENT_DATA.tasks.slice(),      label: v => v,           dot: null,                                  glyph: null },
+      { scope: "s1", dim: "condition", id: "chips-s1-condition", values: () => EXPERIMENT_DATA.conditions.slice(), label: v => v,           dot: v => conditionColors[v] || palette[0], glyph: null },
+      { scope: "s2", dim: "condition", id: "chips-s2-condition", values: () => EXPERIMENT_DATA.conditions.slice(), label: v => v,           dot: v => conditionColors[v] || palette[0], glyph: null },
+      { scope: "s2", dim: "rep",       id: "chips-s2-rep",       values: () => EXPERIMENT_DATA.reps.map(String),   label: v => "r" + v,     dot: null,                                  glyph: null },
+      { scope: "s2", dim: "agent",     id: "chips-s2-agent",     values: () => presentAgentTypes("s2"),            label: requestTypeLabel, dot: null,                                  glyph: v => agentGlyphs[v] || "" },
+      { scope: "s3", dim: "condition", id: "chips-s3-condition", values: () => EXPERIMENT_DATA.conditions.slice(), label: v => v,           dot: v => conditionColors[v] || palette[0], glyph: null },
+      { scope: "s3", dim: "rep",       id: "chips-s3-rep",       values: () => EXPERIMENT_DATA.reps.map(String),   label: v => "r" + v,     dot: null,                                  glyph: null },
+      { scope: "s3", dim: "agent",     id: "chips-s3-agent",     values: () => presentAgentTypes("s3"),            label: requestTypeLabel, dot: null,                                  glyph: v => agentGlyphs[v] || "" },
+    ];
+    function renderChipGroup(strip) {
+      const el = document.getElementById(strip.id); if (!el) return;
+      el.innerHTML = strip.values().map(v => {
+        const dot = strip.dot ? `<span class="dot" style="background:${strip.dot(v)}"></span>` : "";
+        const gly = strip.glyph ? `<span class="gly">${strip.glyph(v)}</span>` : "";
+        return `<span class="chip" data-scope="${strip.scope}" data-dim="${strip.dim}" data-val="${v}">${dot}${gly}${strip.label(v)}</span>`;
+      }).join("");
+    }
+    function buildStrips() { for (const s of STRIPS) renderChipGroup(s); syncChips(); }
+    // An agent row is rescoped (rebuilt + reseeded to all present) whenever its scope's
+    // task/feature/rollout changes — keeps the default-selected look; a deselect-to-one still
+    // scopes the §3 single stream.
+    function refreshAgentChips(scope) {
+      const strip = STRIPS.find(s => s.scope === scope && s.dim === "agent"); if (!strip) return;
+      renderChipGroup(strip);
+      SEL[scope].agent = new Set(strip.values().map(String));
+    }
+    function syncChips() {
+      document.querySelectorAll(".chip[data-scope]").forEach(el =>
+        el.classList.toggle("on", selSet(el.dataset.scope, el.dataset.dim).has(el.dataset.val)));
+    }
+    function readURL() {
+      const h = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+      SEL.task = new Set((h.get("task") || "").split(",").filter(Boolean));
+      return h.get("report");
+    }
+    function writeURL() {
+      const parts = [];
+      if (ACTIVE_REPORT) parts.push(`report=${ACTIVE_REPORT}`);
+      if (SEL.task.size) parts.push(`task=${[...SEL.task].join(",")}`);
+      history.replaceState(null, "", parts.length ? "#" + parts.join("&") : location.pathname + location.search);
+    }
+    // Re-render only the section a filter change affects (task = global → everything).
+    function renderSection(scope) {
+      if (scope === "g") { buildStrips(); renderAll(); return; }
+      if (scope === "s1") { renderKpis(); renderMatrix(); renderConditionChart(); renderOverheadChart(); renderEfficiencyChart(); return; }
+      if (scope === "s2") { renderCacheChart(); renderLatencyChart(); return; }
+      if (scope === "s3") { refreshDrilldown(); return; }
+    }
+    function commitFilter(scope, dim) {
+      if (scope === "g") {                           // task is global: rescope agent rows, full re-render
+        refreshAgentChips("s2"); refreshAgentChips("s3");
+        syncChips(); writeURL(); renderAll();
+        return;
       }
+      if (dim !== "agent") refreshAgentChips(scope); // feature/rollout change rescopes this scope's agents
+      syncChips(); writeURL(); renderSection(scope);
+    }
+
+    // One accumulated-cache panel per task (task names are arbitrary, e.g.
+    // coding / research / coding_longhorizon), built from the report's own task list.
+    function buildCachePanels() {
+      const host = document.getElementById("cache-panels");
+      if (!host) return;
+      host.innerHTML = EXPERIMENT_DATA.tasks.map(task =>
+        `<div id="cache-panel-${task}"><h3 class="cache-sub">${task}</h3>`
+        + `<div id="cache-chart-${task}" class="chart short"></div></div>`
+      ).join("");
     }
 
     function initCharts() {
-      for (const id of ["matrix-chart", "condition-chart", "overhead-chart", "efficiency-chart", "cache-chart-coding", "cache-chart-research", "latency-chart", "run-chart", "component-chart"]) {
-        charts[id] = echarts.init(document.getElementById(id));
+      // Re-runnable: switching reports changes the per-task cache panels, so dispose any
+      // existing instances and rebuild from the active report's task list.
+      for (const id of Object.keys(charts)) { try { charts[id].dispose(); } catch (e) {} delete charts[id]; }
+      _drillSig = null;   // force the §3 per-run panels to rebuild for the newly active report
+      buildCachePanels();
+      const ids = ["matrix-chart", "condition-chart", "efficiency-chart", "latency-chart"];
+      if (overheadApplies()) ids.push("overhead-chart");
+      for (const task of EXPERIMENT_DATA.tasks) ids.push("cache-chart-" + task);
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el) charts[id] = echarts.init(el);
       }
-      window.addEventListener("resize", () => Object.values(charts).forEach(chart => chart.resize()));
     }
 
     function renderKpis() {
-      const runs = filteredRuns();
-      const turns = filteredTurns();
+      const runs = runsFor("s1");
       const cacheHit = avg(runs.map(r => r.cache_hit_ratio));
       const requests = avg(runs.map(r => r.num_requests));
       const totalCost = avg(runs.map(r => r.total_cost_usd));
       const quality = avg(runs.map(r => r.quality_score));
-      const task = taskFilter();
-      const qualityUnit = task === "coding" ? "×" : (task === "research" ? "/100" : "");
+      const tasks = selectedTasks();
+      const qualityUnit = tasks.length === 1 ? (tasks[0].startsWith("coding") ? "×" : "/100") : "";
       const items = [
         ["Runs", fmt(runs.length, 0), ""],
         ["Mean requests / run", fmt(requests, 1), ""],
@@ -818,16 +1409,18 @@ _HTML_TEMPLATE = """<!doctype html>
     }
 
     function renderMatrix() {
-      const task = taskFilter();
-      const rows = EXPERIMENT_DATA.matrix_rows.filter(r => task === "all" || r.startsWith(task + " "));
-      const cells = EXPERIMENT_DATA.matrix.filter(c => task === "all" || c.task === task);
+      const condCols = selectedConditions("s1");
+      const colIndex = new Map(condCols.map((c, i) => [c, i]));
+      const repOf = label => { const m = String(label).match(/r(\\d+)\\s*$/); return m ? m[1] : null; };
+      const rows = EXPERIMENT_DATA.matrix_rows.filter(r => taskActive(r.split(" ")[0]));
+      const cells = EXPERIMENT_DATA.matrix.filter(c => taskActive(c.task) && colIndex.has(c.condition) && rows.includes(c.row));
       const rowIndex = new Map(rows.map((r, i) => [r, i]));
       charts["matrix-chart"].setOption({
         textStyle: baseTextStyle(),
         tooltip: {
           ...TT,
           formatter(params) {
-            const cell = cells.find(d => d.condition_index === params.data[0] && rowIndex.get(d.row) === params.data[1]);
+            const cell = cells.find(d => colIndex.get(d.condition) === params.data[0] && rowIndex.get(d.row) === params.data[1]);
             if (!cell) return "";
             return [
               `<b>${cell.row} &middot; ${cell.condition}</b>`,
@@ -841,12 +1434,12 @@ _HTML_TEMPLATE = """<!doctype html>
           }
         },
         grid: { left: 94, right: 16, top: 12, bottom: 64 },
-        xAxis: catAxis({ data: EXPERIMENT_DATA.conditions, axisLabel: { ...axisLabelStyle(), rotate: 26 } }),
+        xAxis: catAxis({ data: condCols, axisLabel: { ...axisLabelStyle(), rotate: 26 } }),
         yAxis: catAxis({ data: rows }),
         visualMap: { show: false, min: 0, max: 3, inRange: { color: statusColors } },
         series: [{
           type: "heatmap",
-          data: cells.map(d => [d.condition_index, rowIndex.get(d.row), d.status_code]),
+          data: cells.map(d => [colIndex.get(d.condition), rowIndex.get(d.row), d.status_code]),
           label: { show: true, color: "#ffffff", fontFamily: MONO, fontSize: 13, fontWeight: 600, formatter: p => statusGlyph[p.data[2]] },
           itemStyle: { borderColor: "#ffffff", borderWidth: 3 },
           emphasis: { itemStyle: { borderColor: INK, borderWidth: 1 } },
@@ -858,77 +1451,80 @@ _HTML_TEMPLATE = """<!doctype html>
     }
 
     function renderConditionChart() {
-      const task = taskFilter();
       const metric = document.getElementById("metric-filter").value;
-      const rows = EXPERIMENT_DATA.condition_metrics.filter(r => r.task === task);
-      const values = EXPERIMENT_DATA.conditions.map(condition => {
-        const row = rows.find(r => r.condition === condition);
-        return row ? row[metric] : null;
-      });
       const metricLabel = document.getElementById("metric-filter").selectedOptions[0].textContent;
+      const conds = selectedConditions("s1");
+      const tasks = selectedTasks();
+      const grouped = tasks.length > 1;
+      const series = tasks.map((task, ti) => {
+        const rows = EXPERIMENT_DATA.condition_metrics.filter(r => r.task === task);
+        return {
+          name: task,
+          type: "bar",
+          barMaxWidth: 46,
+          data: conds.map(c => { const row = rows.find(r => r.condition === c); return row ? row[metric] : null; }),
+          itemStyle: grouped
+            ? { color: palette[ti % palette.length], borderRadius: [4, 4, 0, 0] }
+            : { color: p => conditionColors[conds[p.dataIndex]] || conditionColors.single_agent, borderRadius: [4, 4, 0, 0] },
+          label: { show: !grouped, position: "top", fontFamily: MONO, fontSize: 11, color: MUTED, formatter: p => fmtMetric(p.value, metric) },
+        };
+      });
       charts["condition-chart"].setOption({
         textStyle: baseTextStyle(),
-        color: [conditionColors.single_agent],
         tooltip: { ...TT, trigger: "axis", valueFormatter: value => fmtMetric(value, metric) },
-        grid: { left: 66, right: 20, top: 18, bottom: 72 },
-        xAxis: catAxis({ data: EXPERIMENT_DATA.conditions, axisLabel: { ...axisLabelStyle(), rotate: 26 } }),
+        legend: grouped ? bottomLegend(tasks) : { show: false },
+        grid: { left: 66, right: 20, top: 18, bottom: grouped ? 92 : 72 },
+        xAxis: catAxis({ data: conds, axisLabel: { ...axisLabelStyle(), rotate: 26 } }),
         yAxis: valueAxis(yName(metricLabel, 54)),
-        series: [{
-          name: metricLabel,
-          type: "bar",
-          data: values,
-          barMaxWidth: 46,
-          itemStyle: { color: function (p) { return conditionColors[EXPERIMENT_DATA.conditions[p.dataIndex]] || conditionColors.single_agent; }, borderRadius: [4, 4, 0, 0] },
-          label: { show: true, position: "top", fontFamily: MONO, fontSize: 11, color: MUTED, formatter: p => fmtMetric(p.value, metric) },
-        }],
-      });
+        series,
+      }, { notMerge: true });
     }
 
+    // The overhead chart is single_agent-relative; only meaningful for reports that
+    // include that baseline. Long-horizon (goal vs ralph_loop) has no baseline, so it
+    // is hidden there and the chart is never built or rendered.
+    function overheadApplies() { return (EXPERIMENT_DATA.conditions || []).includes("single_agent"); }
+
     function renderOverheadChart() {
-      const task = taskFilter();
+      if (!overheadApplies() || !charts["overhead-chart"]) return;
       const metric = document.getElementById("overhead-filter").value;
-      const rows = EXPERIMENT_DATA.condition_overheads.filter(r => r.task === task);
-      const values = EXPERIMENT_DATA.conditions.map(condition => {
-        const row = rows.find(r => r.condition === condition);
-        return row ? row[metric] : null;
-      });
       const metricLabel = document.getElementById("overhead-filter").selectedOptions[0].textContent;
+      const conds = selectedConditions("s1");
+      const tasks = selectedTasks();
+      const grouped = tasks.length > 1;
+      const series = tasks.map((task, ti) => {
+        const rows = EXPERIMENT_DATA.condition_overheads.filter(r => r.task === task);
+        return {
+          name: task,
+          type: "bar",
+          barMaxWidth: 46,
+          data: conds.map(c => { const row = rows.find(r => r.condition === c); return row ? row[metric] : null; }),
+          itemStyle: grouped
+            ? { color: palette[ti % palette.length], borderRadius: [4, 4, 0, 0] }
+            : { color: p => conditionColors[conds[p.dataIndex]] || conditionColors.single_agent, borderRadius: [4, 4, 0, 0] },
+          label: { show: !grouped, position: "top", fontFamily: MONO, fontSize: 11, color: MUTED, formatter: p => p.value === null ? "" : `${fmt(p.value, 2)}×` },
+          markLine: ti === 0 ? { symbol: "none", data: [{ yAxis: 1 }], label: { position: "end", formatter: "1.0× baseline", fontFamily: MONO, fontSize: 10, color: MUTED }, lineStyle: { type: "dashed", color: MUTED } } : undefined,
+        };
+      });
       charts["overhead-chart"].setOption({
         textStyle: baseTextStyle(),
-        tooltip: {
-          ...TT,
-          trigger: "axis",
-          formatter(params) {
-            return params.map(p => `<b>${p.name}</b><br>${metricLabel}: ${fmt(p.value, 2)}×`).join("<br>");
-          }
-        },
-        grid: { left: 62, right: 26, top: 18, bottom: 72 },
-        xAxis: catAxis({ data: EXPERIMENT_DATA.conditions, axisLabel: { ...axisLabelStyle(), rotate: 26 } }),
+        tooltip: { ...TT, trigger: "axis", formatter(params) { return params.map(p => `<b>${p.name}</b><br>${grouped ? p.seriesName + " · " : ""}${metricLabel}: ${fmt(p.value, 2)}×`).join("<br>"); } },
+        legend: grouped ? bottomLegend(tasks) : { show: false },
+        grid: { left: 62, right: 26, top: 18, bottom: grouped ? 92 : 72 },
+        xAxis: catAxis({ data: conds, axisLabel: { ...axisLabelStyle(), rotate: 26 } }),
         yAxis: valueAxis({ ...yName("× vs single_agent", 50), min: 0 }),
-        series: [{
-          name: metricLabel,
-          type: "bar",
-          data: values,
-          barMaxWidth: 46,
-          itemStyle: { color: function (p) { return conditionColors[EXPERIMENT_DATA.conditions[p.dataIndex]] || conditionColors.single_agent; }, borderRadius: [4, 4, 0, 0] },
-          label: { show: true, position: "top", fontFamily: MONO, fontSize: 11, color: MUTED, formatter: p => p.value === null ? "" : `${fmt(p.value, 2)}×` },
-          markLine: {
-            symbol: "none",
-            data: [{ yAxis: 1 }],
-            label: { position: "end", formatter: "1.0× baseline", fontFamily: MONO, fontSize: 10, color: MUTED },
-            lineStyle: { type: "dashed", color: MUTED },
-          },
-        }],
-      });
+        series,
+      }, { notMerge: true });
     }
 
     function renderEfficiencyChart() {
-      const task = taskFilter();
+      const task = selectedTasks()[0] || "coding";
+      const conds = selectedConditions("s1");
       const rows = EXPERIMENT_DATA.condition_metrics
         .filter(r => r.task === task && r.runs > 0 && r.mean_total_cost_usd !== null && r.mean_quality_score !== null);
       const maxRequests = Math.max(1, ...rows.map(r => r.mean_num_requests || 0));
-      const qualityAxis = task === "coding" ? "mean speedup" : (task === "research" ? "mean rubric score" : "mean quality score");
-      const series = EXPERIMENT_DATA.conditions.map(condition => {
+      const qualityAxis = (task.startsWith("coding") ? "mean speedup" : (task.startsWith("research") ? "mean rubric score" : "mean quality score")) + " · " + task;
+      const series = conds.map(condition => {
         const row = rows.find(r => r.condition === condition);
         const data = row ? [[
           row.mean_total_cost_usd,
@@ -957,25 +1553,30 @@ _HTML_TEMPLATE = """<!doctype html>
             return `<b>${params.seriesName}</b><br>cost: ${fmtUsd(v[0])}<br>quality: ${fmt(v[1])}<br>requests: ${fmt(v[2])}<br>success: ${fmt((v[3] || 0) * 100)}%<br>cache hit: ${fmt((v[4] || 0) * 100)}%<br>quality / $: ${fmt(v[5])}`;
           }
         },
-        legend: rightLegend(EXPERIMENT_DATA.conditions),
+        legend: rightLegend(conds),
         grid: { left: 64, right: 152, top: 16, bottom: 50 },
         xAxis: valueAxis(xName("mean total cost ($)", 28)),
         yAxis: valueAxis(yName(qualityAxis, 56)),
         series,
-      });
+      }, { notMerge: true });
     }
 
     function renderCacheChart() {
-      // coding and research are shown in separate panels, always both visible and
-      // independent of the global Task filter.
-      renderCacheChartFor("coding", "cache-chart-coding");
-      renderCacheChartFor("research", "cache-chart-research");
+      // each task's panel shows when its Task is selected in the sidebar.
+      for (const task of EXPERIMENT_DATA.tasks) {
+        const show = taskActive(task);
+        const panel = document.getElementById("cache-panel-" + task);
+        if (panel) panel.style.display = show ? "" : "none";
+        const chart = charts["cache-chart-" + task];
+        if (show && chart) { renderCacheChartFor(task, "cache-chart-" + task); chart.resize(); }
+      }
     }
 
     function renderCacheChartFor(task, elId) {
-      const at = document.getElementById("cache-agent-filter").value || "main-agent";
+      const at = singleAgent("s2");   // "all" unless exactly one agent type is selected
       const rows = EXPERIMENT_DATA.cache_by_agent.filter(r =>
-        r.task === task && (at === "all" || (r.request_type || "main-agent") === at));
+        r.task === task && active("s2", "condition", r.condition) && active("s2", "rep", r.rep)
+        && active("s2", "agent", r.request_type || "main-agent"));
       // one line per (run, agent type) — no averaging across reps
       const groups = new Map();
       for (const r of rows) {
@@ -1048,10 +1649,8 @@ _HTML_TEMPLATE = """<!doctype html>
     }
 
     function renderLatencyChart() {
-      const at = document.getElementById("latency-agent-filter").value || "main-agent";
       const byCondition = new Map();
-      for (const turn of filteredTurns()) {
-        if (at !== "all" && (turn.request_type || "main-agent") !== at) continue;
+      for (const turn of turnsFor("s2")) {
         const ctx = turn.prompt_tokens;
         if (ctx === null || ctx === undefined || ctx <= 0) continue;
         const hitRate = 100 * (turn.cache_read || 0) / ctx;
@@ -1069,7 +1668,7 @@ _HTML_TEMPLATE = """<!doctype html>
         if (spec.hollow) item.itemStyle = { color: "transparent", borderColor: color, borderWidth: 1.6, opacity: 0.95 };
         byCondition.get(turn.condition).push(item);
       }
-      const series = EXPERIMENT_DATA.conditions.map(condition => ({
+      const series = selectedConditions("s2").map(condition => ({
         name: condition,
         type: "scatter",
         data: byCondition.get(condition) || [],
@@ -1084,59 +1683,53 @@ _HTML_TEMPLATE = """<!doctype html>
             return `<b>${params.seriesName}</b><br>run: ${v[3]}<br>Request # within selected run: ${v[4]}<br>Request type: ${v[5] || "main-agent"}<br>context length: ${fmt(v[0])}<br>prefix cache hit rate: ${fmt(v[1], 1)}%<br>TTFT: ${fmt(v[6])}s<br>total: ${fmt(v[2])}s`;
           }
         },
-        legend: rightLegend(EXPERIMENT_DATA.conditions),
+        legend: rightLegend(selectedConditions("s2")),
         grid: { left: 64, right: 152, top: 16, bottom: 62 },
         xAxis: valueAxis(xName("context length (tokens)", 30)),
         yAxis: valueAxis({ ...yName("prefix cache hit rate (%)", 52), min: 0, max: 100 }),
         dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 20 }],
         series,
-      });
+      }, { notMerge: true });
     }
 
-    function populateRunFilter() {
-      const select = document.getElementById("run-filter");
-      const runs = filteredRuns();
-      const current = select.value;
-      select.innerHTML = runs.map(run => `<option value="${run.run_id}">${run.task} / ${run.condition} / r${run.rep}</option>`).join("");
-      if (runs.some(run => run.run_id === current)) select.value = current;
+    // Bar-density control shared by the two §3 (single-run) charts. Sparse runs render fat
+    // bars with wide gaps; shrinking the plot width compresses bar width AND inter-bar gaps
+    // together (ECharts auto-distributes within the grid), so a few requests can be packed to
+    // the fine density of a long-horizon run. Runs at/above DENSE_N are already fine, so the
+    // slider is hidden and the plot keeps its full default width. Returns the grid.right to use.
+    const DENSE_N = 40;
+    function densityGridRight(chartId, n, gridLeft, defaultRight) {
+      const showScale = n > 1 && n < DENSE_N;
+      const scaleCtl = document.getElementById("run-scale-control");
+      if (scaleCtl) scaleCtl.style.display = showScale ? "" : "none";
+      if (!showScale) return defaultRight;
+      const slider = document.getElementById("run-scale");
+      const s = slider ? Math.min(1, Math.max(0, Number(slider.value) / 100)) : 1;  // 1 = full width, 0 = densest
+      const chart = charts[chartId];
+      const W = chart ? chart.getWidth() : 0;
+      if (!(W > 0)) return defaultRight;
+      const fullPlot = Math.max(40, W - gridLeft - defaultRight);
+      const densePlot = fullPlot * (n / DENSE_N);                 // width n bars would get in a full DENSE_N chart
+      const plot = densePlot + s * (fullPlot - densePlot);        // interpolate dense <-> full
+      return Math.max(defaultRight, Math.round(W - gridLeft - plot));
     }
 
-    function selectedRunId() {
-      const select = document.getElementById("run-filter");
-      return select.value || (filteredRuns()[0] && filteredRuns()[0].run_id);
-    }
-
-    function populateAgentFilter() {
-      const select = document.getElementById("agent-filter");
-      const runId = selectedRunId();
-      const types = [];
-      EXPERIMENT_DATA.turns
-        .filter(t => t.run_id === runId)
-        .sort((a, b) => a.request_index - b.request_index)
-        .forEach(t => { const rt = t.request_type || "main-agent"; if (!types.includes(rt)) types.push(rt); });
-      const current = select.value;
-      const opts = ["all", ...types];
-      select.innerHTML = opts.map(v => `<option value="${v}">${v === "all" ? "all agent types" : requestTypeLabel(v)}</option>`).join("");
-      if (opts.includes(current)) select.value = current;
-      else if (types.includes("main-agent")) select.value = "main-agent";
-      else select.value = opts[0];
-    }
-
-    function selectedAgentType() {
-      const select = document.getElementById("agent-filter");
-      return select.value || "all";
-    }
-
-    function renderRunChart() {
-      const runId = selectedRunId();
-      const at = selectedAgentType();
-      const rows = EXPERIMENT_DATA.turns
-        .filter(t => t.run_id === runId && (at === "all" || (t.request_type || "main-agent") === at))
+    function renderRunChart(runId, key) {
+      const at = singleAgent("s3");
+      const groupMode = (document.getElementById("group-filter") || {}).value || "agent";
+      const turnRows = EXPERIMENT_DATA.turns
+        .filter(t => t.run_id === runId && active("s3", "agent", t.request_type || "main-agent"))
         .sort((a, b) => a.request_index - b.request_index);
-      // When a single agent type is selected, number its own rounds 1..n (no gaps);
-      // in "all" view keep the global index + type to show interleaving.
-      const x = rows.map((r, i) => at === "all" ? requestAxisLabel(r) : `#${i + 1}`);
-      charts["run-chart"].setOption({
+      const typeByIndex = new Map();
+      for (const t of turnRows) if (!typeByIndex.has(t.request_index)) typeByIndex.set(t.request_index, t.request_type);
+      const turnByIndex = new Map(turnRows.map(t => [t.request_index, t]));
+      const rawIndexes = [...new Set(turnRows.map(t => t.request_index))].sort((a, b) => a - b);
+      // Same grouping/annotation as Context Source Breakdown, driven by the shared group toggle.
+      const o = orderedRequests(typeByIndex, rawIndexes, at, groupMode);
+      const rows = o.indexes.map(i => turnByIndex.get(i) || {});
+      const tintArea = bandTintArea(o);
+      const gridRight = densityGridRight("run-chart-" + key, o.indexes.length, 66, 62);
+      charts["run-chart-" + key].setOption({
         textStyle: baseTextStyle(),
         tooltip: {
           ...TT,
@@ -1146,7 +1739,8 @@ _HTML_TEMPLATE = """<!doctype html>
             const row = rows[pos] || {};
             return [
               `<b>${runId}</b>`,
-              `round: #${pos + 1}${at === "all" ? "" : ` (within ${requestTypeLabel(at)})`}`,
+              o.annotate ? `round: ${o.ordinal[pos]} (within ${requestTypeLabel(row.request_type)})`
+                         : `position: #${pos + 1}`,
               `global request #: ${row.request_index === null || row.request_index === undefined ? "n/a" : requestNumber(row.request_index)}`,
               `Request type: ${requestTypeLabel(row.request_type)}`,
               `input: ${fmt(row.input_tokens)}`,
@@ -1165,21 +1759,22 @@ _HTML_TEMPLATE = """<!doctype html>
           }
         },
         legend: bottomLegend(["input", "cache read", "cache write 5m", "cache write 1h", "output", "TTFT", "total"]),
-        grid: { left: 66, right: 62, top: 16, bottom: 78 },
-        xAxis: catAxis({ data: x, axisLabel: { ...axisLabelStyle(), fontSize: 10 } }),
+        grid: { left: 66, right: gridRight, top: 16, bottom: 120 },
+        xAxis: groupedXAxis(o, "bottom"),
         yAxis: [
-          valueAxis(yName("tokens", 58)),
+          valueAxis({ ...yName("tokens", 58), min: 0, max: runTokenMax() }),
           valueAxis({ ...yName("seconds", 46), splitLine: { show: false } }),
         ],
         series: [
-          { name: "input", type: "bar", stack: "tokens", data: rows.map(t => t.input_tokens || 0), itemStyle: { color: "#3b5bdb" } },
-          { name: "cache read", type: "bar", stack: "tokens", data: rows.map(t => t.cache_read || 0), itemStyle: { color: "#0c8599" } },
-          { name: "cache write 5m", type: "bar", stack: "tokens", data: rows.map(t => t.cache_creation_5m || 0), itemStyle: { color: "#e8590c" } },
-          { name: "cache write 1h", type: "bar", stack: "tokens", data: rows.map(t => t.cache_creation_1h || 0), itemStyle: { color: "#f59f00" } },
-          { name: "output", type: "bar", stack: "tokens", data: rows.map(t => t.output_tokens || 0), itemStyle: { color: "#7048e8" } },
+          { name: "input", type: "bar", stack: "tokens", xAxisIndex: 0, data: rows.map(t => t.input_tokens || 0), itemStyle: { color: "#3b5bdb" }, markArea: tintArea },
+          { name: "cache read", type: "bar", stack: "tokens", xAxisIndex: 0, data: rows.map(t => t.cache_read || 0), itemStyle: { color: "#0c8599" } },
+          { name: "cache write 5m", type: "bar", stack: "tokens", xAxisIndex: 0, data: rows.map(t => t.cache_creation_5m || 0), itemStyle: { color: "#e8590c" } },
+          { name: "cache write 1h", type: "bar", stack: "tokens", xAxisIndex: 0, data: rows.map(t => t.cache_creation_1h || 0), itemStyle: { color: "#f59f00" } },
+          { name: "output", type: "bar", stack: "tokens", xAxisIndex: 0, data: rows.map(t => t.output_tokens || 0), itemStyle: { color: "#7048e8" } },
           {
             name: "TTFT",
             type: "line",
+            xAxisIndex: 0,
             yAxisIndex: 1,
             data: rows.map(t => ({ value: t.ttft_s, symbol: requestTypeSymbols[t.request_type] || "circle" })),
             itemStyle: { color: "#1098ad" },
@@ -1188,6 +1783,7 @@ _HTML_TEMPLATE = """<!doctype html>
           {
             name: "total",
             type: "line",
+            xAxisIndex: 0,
             yAxisIndex: 1,
             data: rows.map(t => ({ value: t.total_s, symbol: requestTypeSymbols[t.request_type] || "circle" })),
             itemStyle: { color: "#c2255c" },
@@ -1195,15 +1791,17 @@ _HTML_TEMPLATE = """<!doctype html>
           },
         ],
       });
+      drawGroupBrackets(charts["run-chart-" + key], o, "bottom");
     }
 
-    function resetContextText() {
-      const panel = document.getElementById("ctx-text-panel");
-      if (panel) panel.innerHTML = `<div class="ctx-empty">Click a stacked segment above to view the text captured for that context part.</div>`;
+    function resetContextText(hint, panelId) {
+      const panel = document.getElementById(panelId || "ctx-text-panel");
+      const msg = hint || "Click a stacked segment above to view the text captured for that context part.";
+      if (panel) panel.innerHTML = `<div class="ctx-empty">${msg}</div>`;
     }
 
-    function showContextText(runId, reqIndex, component, requestType, tokens) {
-      const panel = document.getElementById("ctx-text-panel");
+    function showContextText(runId, reqIndex, component, requestType, tokens, panelId) {
+      const panel = document.getElementById(panelId || "ctx-text-panel");
       if (!panel) return;
       const entry = CONTEXT_TEXTS[`${runId}|${reqIndex}|${component}`] || CONTEXT_TEXTS[`${runId}|*|${component}`];
       const meta = entry
@@ -1218,39 +1816,199 @@ _HTML_TEMPLATE = """<!doctype html>
       panel.querySelector(".ctx-body").textContent = entry.text;
     }
 
-    function renderComponentChart() {
-      const runId = selectedRunId();
-      const at = selectedAgentType();
-      resetContextText();
-      const rows = EXPERIMENT_DATA.context_source_components
-        .filter(c => c.run_id === runId && (at === "all" || (c.request_type || "main-agent") === at))
-        .sort((a, b) => a.request_index - b.request_index);
-      const indexes = [...new Set(rows.map(r => r.request_index))];
+    // Two ways to compose the Context Source Breakdown: by source category (the
+    // /context-style breakdown, click-to-text) or by token billing bucket (input /
+    // cache read / cache write — the tokens actually sent each request, output excluded).
+    const COMPONENT_MODES = {
+      context: {
+        // Claude Code's /context buckets, mirrored exactly: System prompt / System tools /
+        // MCP tools / Custom agents / Memory files / Skills / Messages. Matches the order
+        // and split of `/context` (Free space — the unused window — is not part of a
+        // per-request composition, so it is omitted). Note like /context: Skills counts
+        // only the skill LISTING; an invoked skill body counts under Messages.
+        datasetKey: "context_source_components",
+        valueField: "est_tokens",
+        bucketOf: c => ({
+          "base system prompt": "System prompt",
+          "builtin tool definitions": "System tools",
+          "MCP / extension tool definitions": "MCP tools",
+          "custom agent definitions": "Custom agents",
+          "auto memory": "Memory files",
+          "CLAUDE.md / project instructions": "Memory files",
+          "skills listing": "Skills",
+          "invoked skill bodies": "Messages",
+          "hooks / system reminders": "Messages",
+          "user input": "Messages",
+          "assistant / conversation history": "Messages",
+          "tool results / file reads": "Messages",
+          "subagent summaries": "Messages",
+          "uncategorized context": "Messages",
+        }[c] ?? "Messages"),
+        order: ["System prompt", "System tools", "MCP tools", "Custom agents", "Memory files", "Skills", "Messages"],
+        colors: { "System prompt": "#3b5bdb", "System tools": "#0c8599", "MCP tools": "#15aabf",
+          "Custom agents": "#f76707", "Memory files": "#2f9e44",
+          "Skills": "#7048e8", "Messages": "#495057" },
+        yName: "context length (tokens)",
+        legendReserve: 150,
+        clickable: false,
+      },
+      source: {
+        datasetKey: "context_source_components",
+        valueField: "est_tokens",
+        bucketOf: c => c,
+        order: [
+          "base system prompt",
+          "builtin tool definitions",
+          "MCP / extension tool definitions",
+          "custom agent definitions",
+          "CLAUDE.md / project instructions",
+          "skills listing",
+          "invoked skill bodies",
+          "auto memory",
+          "hooks / system reminders",
+          "user input",
+          "assistant / conversation history",
+          "tool results / file reads",
+          "subagent summaries",
+          "uncategorized context",
+        ],
+        colors: sourceColors,
+        yName: "context length (tokens)",
+        legendReserve: 272,
+        clickable: true,
+      },
+      token: {
+        datasetKey: "context_token_components",
+        valueField: "tokens",
+        // Fold the 5m / 1h cache writes into one "cache write" bucket; drop output tokens
+        // (generated, not part of the input context). bucketOf -> null means "exclude".
+        bucketOf: c => ({
+          "input tokens": "input",
+          "prefix cache read": "cache read",
+          "prefix cache write 5m": "cache write",
+          "prefix cache write 1h": "cache write",
+        }[c] ?? null),
+        order: ["input", "cache read", "cache write"],
+        colors: { "input": "#3b5bdb", "cache read": "#0c8599", "cache write": "#e8590c" },
+        yName: "context length (tokens)",
+        legendReserve: 140,
+        clickable: false,
+      },
+    };
+    const COMPONENT_NOTES = {
+      context: "Per-request context window in Claude Code's /context categories, mirrored exactly — System prompt · System tools · MCP tools · Custom agents · Memory files · Skills · Messages — aggregated up from our finer source split (Free space, the unused window, is omitted: this is what's USED, not the whole window). Bucketing matches /context: builtin tool defs → System tools, MCP/extension tool defs → MCP tools, the agent registry → Custom agents, the skill LISTING → Skills, while an invoked skill BODY counts under Messages (as in /context). Each bar's TOTAL is the exact context length (input + cache read + cache write, from the API usage); the y-axis is fixed to the largest context across runs so they compare. The split is a data-calibrated estimate (per-category tokens-per-byte fit to the exact totals; /context is itself an estimate). Switch compose to 'source (detailed)' to split Messages into user input / conversation / tool results / subagent summaries, or to 'token type' for the measured input/cache-read/cache-write decomposition.",
+      source: "Per-request context composition by source, like Claude Code's /context but FINER (Messages split into user input / conversation / tool results / subagent summaries; System tools split into builtin vs MCP). Switch compose to '/context' for Claude Code's exact buckets. Each bar's TOTAL height is the exact context length (input + cache read + cache write, from the API usage); the y-axis is fixed to the largest context across runs so they compare. The per-source SPLIT is a data-calibrated estimate — per-category tokens-per-byte fit to the exact totals — not a measured per-category count (Claude Code's /context is itself an estimate; an exact split needs the count_tokens API per section). For the measured decomposition, switch compose to 'token type'. Stacked top→bottom in canonical context order: the stable prefix (system prompt, tool definitions) at the top, the most recent content (conversation, tool results) toward the bottom — categories interleaved in the real request appear as separate blocks. Click a segment to see its captured text.",
+      token: "Per-request context length by token bucket: input + prefix cache read + prefix cache write (5m+1h summed) — the MEASURED decomposition from each request's usage (exact, not estimated). Output tokens are excluded (the model's reply, not input context). The y-axis is fixed to the largest context across runs so they compare. Group = agent type clusters requests by who made them (with the type labelled above the x-axis); group = none keeps raw request order.",
+    };
+
+    // §3 renders one block per selected run, stacked top to bottom. The run set follows the
+    // sidebar Task / Feature / Rollout chips; the DOM + chart instances are rebuilt only when
+    // that set changes (refreshDrilldown), and every block re-renders on any control change.
+    let _drillSig = null;
+    let _drillRuns = [];
+    function buildDrilldownPanels(runs) {
+      const host = document.getElementById("drilldown-runs");
+      if (!host) return runs;
+      for (const id of Object.keys(charts)) {
+        if (id.startsWith("run-chart-") || id.startsWith("component-chart-")) {
+          try { charts[id].dispose(); } catch (e) {}
+          delete charts[id];
+        }
+      }
+      host.innerHTML = runs.length
+        ? runs.map((run, i) => `
+          <article class="panel drilldown-run">
+            <div class="panel-head"><h2>${run.task} / ${run.condition} / r${run.rep}</h2><span class="run-tag">${run.run_id}</span></div>
+            <h3 class="drill-sub">Per-Run Request Cost Timeline</h3>
+            <div id="run-chart-${i}" class="chart"></div>
+            <h3 class="drill-sub">Context Source Breakdown</h3>
+            <div id="component-chart-${i}" class="chart tall"></div>
+            <p class="note" id="component-note-${i}"></p>
+            <div class="ctx-text-panel" id="ctx-text-panel-${i}"><div class="ctx-empty">Click a stacked segment above to view the text captured for that context part.</div></div>
+          </article>`).join("")
+        : `<p class="note">No runs match the current Task / Feature / Rollout selection.</p>`;
+      runs.forEach((run, i) => {
+        const rc = document.getElementById("run-chart-" + i); if (rc) charts["run-chart-" + i] = echarts.init(rc);
+        const cc = document.getElementById("component-chart-" + i); if (cc) charts["component-chart-" + i] = echarts.init(cc);
+      });
+      return runs;
+    }
+    function renderDrilldown() {
+      const composeMode = (document.getElementById("compose-filter") || {}).value || "context";
+      const groupMode = (document.getElementById("group-filter") || {}).value || "agent";
+      const cfg = COMPONENT_MODES[composeMode] || COMPONENT_MODES.source;
+      _drillRuns.forEach((run, i) => {
+        renderRunChart(run.run_id, i);
+        renderStackedContextChart(cfg, composeMode, groupMode, run.run_id, i);
+      });
+    }
+    function refreshDrilldown() {
+      const runs = runsFor("s3");
+      const sig = runs.map(r => r.run_id).join("|");
+      if (sig !== _drillSig) { _drillRuns = buildDrilldownPanels(runs); _drillSig = sig; }
+      renderDrilldown();
+    }
+
+    function renderStackedContextChart(cfg, composeMode, groupMode, runId, key) {
+      const at = singleAgent("s3");
+      resetContextText(cfg.clickable ? null : "Text preview is available in the source view.", "ctx-text-panel-" + key);
+      const rows = (EXPERIMENT_DATA[cfg.datasetKey] || [])
+        .filter(c => c.run_id === runId && active("s3", "agent", c.request_type || "main-agent"))
+        .map(c => ({ run_index: c.request_index, request_type: c.request_type, bucket: cfg.bucketOf(c.component), value: c[cfg.valueField] || 0 }))
+        .filter(c => c.bucket !== null)
+        .sort((a, b) => a.run_index - b.run_index);
       const typeByIndex = new Map();
       for (const row of rows) {
-        if (!typeByIndex.has(row.request_index)) typeByIndex.set(row.request_index, row.request_type);
+        if (!typeByIndex.has(row.run_index)) typeByIndex.set(row.run_index, row.request_type);
       }
-      // Single agent type -> sequential rounds 1..n; "all" -> global index + type.
-      const x = indexes.map((i, pos) => at === "all" ? `#${requestNumber(i)}\\n${requestTypeLabel(typeByIndex.get(i))}` : `#${pos + 1}`);
-      const preferred = [
-        "base system prompt",
-        "builtin tool definitions",
-        "MCP / extension tool definitions",
-        "CLAUDE.md / project instructions",
-        "skills listing",
-        "invoked skill bodies",
-        "auto memory",
-        "hooks / system reminders",
-        "user input",
-        "assistant / conversation history",
-        "tool results / file reads",
-        "subagent summaries",
-        "uncategorized context",
-      ];
-      const present = [...new Set(rows.map(r => r.component))];
-      const components = preferred.filter(c => present.includes(c)).concat(present.filter(c => !preferred.includes(c)));
-      const byKey = new Map(rows.map(r => [`${r.request_index}:${r.component}`, r.est_tokens || 0]));
-      charts["component-chart"].setOption({
+      const rawIndexes = [...new Set(rows.map(r => r.run_index))].sort((a, b) => a - b);
+      const o = orderedRequests(typeByIndex, rawIndexes, at, groupMode);
+      const indexes = o.indexes;
+      const present = [...new Set(rows.map(r => r.bucket))];
+      const components = cfg.order.filter(c => present.includes(c)).concat(present.filter(c => !cfg.order.includes(c)));
+      // Sum by (request, bucket) — token mode folds two cache-write TTLs into one bucket.
+      const byKey = new Map();
+      for (const r of rows) {
+        const key = `${r.run_index}:${r.bucket}`;
+        byKey.set(key, (byKey.get(key) || 0) + r.value);
+      }
+      const tintArea = bandTintArea(o);
+      // Per-request prefix cache hit rate (cache read ÷ context length), overlaid as a
+      // line on a right-hand 0–100% axis (inverted: 100% at the bottom). Toggleable via
+      // the "cache hit rate" switch in the panel head — off drops the line + right axis.
+      const HIT_NAME = "prefix cache hit rate";
+      const HIT_COLOR = "#f03e3e";
+      const showHit = (document.getElementById("hitrate-toggle") || {}).checked !== false;
+      const hitByIndex = new Map();
+      if (showHit) for (const t of (EXPERIMENT_DATA.turns || [])) {
+        if (String(t.run_id) !== String(runId)) continue;
+        const denom = t.prompt_tokens || 0;
+        hitByIndex.set(t.request_index, denom ? (t.cache_read || 0) / denom * 100 : null);
+      }
+      const hitData = indexes.map(i => { const v = hitByIndex.get(i); return (v === null || v === undefined) ? null : v; });
+      const barSeries = components.map((component, idx) => ({
+        name: component,
+        type: "bar",
+        stack: "context",
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        data: indexes.map(i => byKey.get(`${i}:${component}`) || 0),
+        itemStyle: { color: cfg.colors[component] || palette[idx % palette.length] },
+        markArea: idx === 0 ? tintArea : undefined,
+      }));
+      const hitSeries = {
+        name: HIT_NAME, type: "line", xAxisIndex: 0, yAxisIndex: 1, data: hitData,
+        connectNulls: true, symbol: "circle", symbolSize: 4,
+        lineStyle: { color: HIT_COLOR, width: 2 }, itemStyle: { color: HIT_COLOR },
+        emphasis: { disabled: true }, z: 12,
+      };
+      // [0] context bars — top-aligned (root at y=0, growing downward), fixed to the
+      // report-global max context length; [1] the cache hit-rate line, inverted so 100%
+      // sits at the BOTTOM and 0 at the top, reading with the top-anchored bars.
+      const leftAxis = valueAxis({ ...yName(cfg.yName, 62), inverse: true, min: 0, max: contextLengthMax() });
+      const rightAxis = valueAxis({ min: 0, max: 100, inverse: true, position: "right", splitLine: { show: false },
+        axisLabel: { ...axisLabelStyle(), formatter: v => v + "%" } });
+      const componentOption = {
         textStyle: baseTextStyle(),
         tooltip: {
           ...TT,
@@ -1260,35 +2018,41 @@ _HTML_TEMPLATE = """<!doctype html>
             const request = indexes[pos];
             const lines = [
               `<b>${runId}</b>`,
-              `round: #${pos + 1}${at === "all" ? "" : ` (within ${requestTypeLabel(at)})`}`,
+              o.annotate ? `round: ${o.ordinal[pos]} (within ${requestTypeLabel(typeByIndex.get(request))})`
+                         : `position: #${pos + 1}`,
               `global request #: ${request === null || request === undefined ? "n/a" : requestNumber(request)}`,
               `Request type: ${requestTypeLabel(typeByIndex.get(request))}`,
             ];
-            for (const p of params) if (p.value) lines.push(`${p.marker}${p.seriesName}: ${fmt(p.value)}`);
+            for (const p of params) {
+              if (p.seriesName === HIT_NAME) {
+                if (p.value !== null && p.value !== undefined) lines.push(`${p.marker}${p.seriesName}: ${fmt(p.value, 1)}%`);
+              } else if (p.value) {
+                lines.push(`${p.marker}${p.seriesName}: ${fmt(p.value)}`);
+              }
+            }
             return lines.join("<br>");
           }
         },
-        legend: rightLegend(components),
-        grid: { left: 74, right: 236, top: 52, bottom: 24 },
-        xAxis: catAxis({ data: x, position: "top", axisLabel: { ...axisLabelStyle(), fontSize: 10 } }),
-        // Top-aligned: the context window starts at its root (base system prompt) at
-        // the top (y=0) and grows downward, so the value axis is inverted and the
-        // segments stack in canonical /context order (system prompt first/topmost).
-        yAxis: valueAxis({ ...yName("estimated context tokens", 62), inverse: true }),
-        series: components.map((component, idx) => ({
-          name: component,
-          type: "bar",
-          stack: "context",
-          data: indexes.map(i => byKey.get(`${i}:${component}`) || 0),
-          itemStyle: { color: sourceColors[component] || palette[idx % palette.length] },
-        })),
-      }, { notMerge: true });
-      const chart = charts["component-chart"];
+        legend: bottomLegend(showHit ? components.concat([HIT_NAME]) : components),
+        grid: { left: 74, right: densityGridRight("component-chart-" + key, o.indexes.length, 74, showHit ? 60 : 24), top: 48, bottom: 66 },
+        xAxis: groupedXAxis(o),
+        yAxis: showHit ? [leftAxis, rightAxis] : [leftAxis],
+        series: showHit ? barSeries.concat([hitSeries]) : barSeries,
+      };
+      charts["component-chart-" + key].setOption(componentOption, { notMerge: true });
+      const noteEl = document.getElementById("component-note-" + key);
+      if (noteEl) noteEl.textContent = (COMPONENT_NOTES[composeMode] || COMPONENT_NOTES.source)
+        + (showHit ? " The red line (right axis, inverted — 100% at the bottom) overlays each request's prefix cache hit rate (cache read ÷ context length)." : "");
+      const chart = charts["component-chart-" + key];
+      drawGroupBrackets(chart, o, "inside");
       chart.off("click");
-      chart.on("click", params => {
-        const reqIndex = indexes[params.dataIndex];
-        showContextText(runId, reqIndex, params.seriesName, typeByIndex.get(reqIndex), params.value);
-      });
+      if (cfg.clickable) {
+        chart.on("click", params => {
+          if (params.seriesName === "prefix cache hit rate") return;  // overlay line has no captured text
+          const reqIndex = indexes[params.dataIndex];
+          showContextText(runId, reqIndex, params.seriesName, typeByIndex.get(reqIndex), params.value, "ctx-text-panel-" + key);
+        });
+      }
     }
 
     function avg(values) {
@@ -1312,32 +2076,86 @@ _HTML_TEMPLATE = """<!doctype html>
       renderConditionChart();
       renderOverheadChart();
       renderEfficiencyChart();
-      populateDistAgentFilters();
       renderCacheChart();
       renderLatencyChart();
-      populateRunFilter();
-      populateAgentFilter();
-      renderRunChart();
-      renderComponentChart();
+      refreshDrilldown();
     }
 
-    document.getElementById("generated-at").textContent = prettyDate(EXPERIMENT_DATA.generated_at);
-    document.getElementById("task-filter").addEventListener("change", renderAll);
+    // Make `key` the active report: swap in its (lazily parsed) data + context-texts,
+    // repaint the masthead/§0 band, rebuild the sidebar + charts, and re-render.
+    function activateReport(key, resetFilters) {
+      const m = REPORTS_MANIFEST.find(r => r.key === key) || REPORTS_MANIFEST[0];
+      if (!m) return;
+      ACTIVE_REPORT = m.key;
+      if (!REPORTS_PARSED[m.key]) {
+        const parse = id => { const el = document.getElementById(id); try { return JSON.parse((el && el.textContent) || "{}"); } catch (e) { return {}; } };
+        REPORTS_PARSED[m.key] = { data: parse(m.dataId), texts: parse(m.textsId) };
+      }
+      EXPERIMENT_DATA = REPORTS_PARSED[m.key].data;
+      CONTEXT_TEXTS = REPORTS_PARSED[m.key].texts;
+      document.getElementById("rpt-eyebrow").innerHTML = m.eyebrow || "";
+      document.getElementById("rpt-title").innerHTML = m.title || "";
+      document.getElementById("rpt-lede").innerHTML = m.lede || "";
+      if (m.gradient) document.getElementById("masthead").style.borderImage = m.gradient;
+      document.getElementById("brief-band-host").innerHTML = m.briefHtml || "";
+      const gen = document.getElementById("generated-at");
+      if (gen) gen.textContent = prettyDate(EXPERIMENT_DATA.generated_at);
+      document.querySelectorAll(".switch-tab").forEach(t => t.classList.toggle("on", t.dataset.report === m.key));
+      // Show the single_agent-relative overhead panel + control only when a baseline exists.
+      for (const id of ["overhead-panel", "overhead-control"]) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = overheadApplies() ? "" : "none";
+      }
+      // Sections are not URL-persisted, so always seed them to defaults; preserve a URL-provided
+      // global Task on initial load (resetFilters=false), reset it on a tab switch.
+      const keepTask = (!resetFilters && SEL.task.size) ? new Set(SEL.task) : null;
+      seedDefaultFilters();
+      if (keepTask) SEL.task = keepTask;
+      buildStrips();
+      initCharts();
+      renderAll();
+      writeURL();
+    }
+
+    document.getElementById("switcher").addEventListener("click", (e) => {
+      const tab = e.target.closest(".switch-tab");
+      if (tab && tab.dataset.report !== ACTIVE_REPORT) activateReport(tab.dataset.report, true);
+    });
+    // Chip / "all"-toggle clicks across every section strip (event delegation on <main>): each
+    // chip carries data-scope + data-dim; commitFilter re-renders only the affected section.
+    document.querySelector("main").addEventListener("click", (e) => {
+      const chip = e.target.closest(".chip[data-scope]");
+      if (chip) {
+        const { scope, dim, val } = chip.dataset;
+        const set = selSet(scope, dim);
+        if (set.has(val)) set.delete(val); else set.add(val);
+        commitFilter(scope, dim);
+        return;
+      }
+      const tog = e.target.closest(".ftoggle[data-scope]");
+      if (tog) { selSet(tog.dataset.scope, tog.dataset.toggle).clear(); commitFilter(tog.dataset.scope, tog.dataset.toggle); }  // clear = show all
+    });
     document.getElementById("metric-filter").addEventListener("change", renderConditionChart);
     document.getElementById("overhead-filter").addEventListener("change", renderOverheadChart);
-    document.getElementById("cache-agent-filter").addEventListener("change", renderCacheChart);
-    document.getElementById("latency-agent-filter").addEventListener("change", renderLatencyChart);
-    document.getElementById("run-filter").addEventListener("change", () => {
-      populateAgentFilter();
-      renderRunChart();
-      renderComponentChart();
+    document.getElementById("run-scale").addEventListener("input", renderDrilldown);
+    document.getElementById("compose-filter").addEventListener("change", renderDrilldown);
+    document.getElementById("hitrate-toggle").addEventListener("change", renderDrilldown);
+    document.getElementById("group-filter").addEventListener("change", renderDrilldown);
+    let _resizeTimer = null;
+    window.addEventListener("resize", () => {
+      Object.values(charts).forEach(chart => chart.resize());
+      // the §3 group brackets are absolute-pixel graphics — recompute them after layout settles
+      clearTimeout(_resizeTimer);
+      _resizeTimer = setTimeout(renderDrilldown, 120);
     });
-    document.getElementById("agent-filter").addEventListener("change", () => {
-      renderRunChart();
-      renderComponentChart();
+    window.addEventListener("hashchange", () => {
+      const r = readURL();
+      if (r && r !== ACTIVE_REPORT) activateReport(r, false);
+      else { buildStrips(); renderAll(); writeURL(); }
     });
-    initCharts();
-    renderAll();
+
+    const initialReport = readURL();
+    activateReport(initialReport || (REPORTS_MANIFEST[0] && REPORTS_MANIFEST[0].key), false);
   </script>
 </body>
 </html>"""

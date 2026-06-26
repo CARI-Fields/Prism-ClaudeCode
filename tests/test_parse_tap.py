@@ -143,6 +143,77 @@ def test_tap_marks_request_type_subclasses_without_filtering():
     assert sum(row["est_tokens"] for row in monitor_components) == 31
 
 
+def test_web_helper_requests_are_not_misclassified_as_main_agent():
+    """WebSearch / WebFetch helper requests do NOT carry the cc_is_subagent=true
+    marker in real captures, yet must still be split out rather than swallowed into
+    the main-agent curve (root cause of the research-condition context 'fluctuation')."""
+    tap = [
+        {
+            "timestamp": "2026-06-19T21:02:44.554578+00:00",
+            "duration_ms": 1000,
+            "model": "claude-sonnet-4-6",
+            "system": [{"type": "text", "text": "You are a Claude agent.\nYou are an assistant for performing a web search tool use"}],
+            "tools": [{"name": "web_search", "description": "Search web"}],
+            "messages": [{"role": "user", "content": "Search recent sources."}],
+            "response": {"usage": {
+                "input_tokens": 3, "cache_read_input_tokens": 4,
+                "cache_creation_input_tokens": 5, "output_tokens": 6,
+            }},
+        },
+        {
+            "timestamp": "2026-06-19T21:02:45.554578+00:00",
+            "duration_ms": 500,
+            "model": "claude-sonnet-4-6",
+            "system": [{"type": "text", "text": "You are a Claude agent, built on Anthropic's Claude Agent SDK."}],
+            "messages": [{"role": "user", "content": "Web page content:\n---\nPaper text"}],
+            "response": {"usage": {
+                "input_tokens": 4, "cache_read_input_tokens": 5,
+                "cache_creation_input_tokens": 6, "output_tokens": 7,
+            }},
+        },
+        {
+            "timestamp": "2026-06-19T21:02:46.554578+00:00",
+            "duration_ms": 500,
+            "model": "claude-sonnet-4-6",
+            "system": [{"type": "text", "text": "You are a Claude agent.\nYou are evaluating a stop-condition hook in Claude Code."}],
+            "messages": [{"role": "user", "content": "Should the loop stop?"}],
+            "response": {"usage": {
+                "input_tokens": 5, "cache_read_input_tokens": 6,
+                "cache_creation_input_tokens": 7, "output_tokens": 8,
+            }},
+        },
+    ]
+    assert [row["request_type"] for row in tap_turns(tap)] == [
+        "web-search-subagent",
+        "web-fetch-subagent",
+        "stop-condition-eval",
+    ]
+
+
+def test_agent_registry_reminder_is_its_own_source_for_custom_agents_bucket():
+    """The 'Available agent types' system-reminder is Claude Code's /context "Custom
+    agents" content. It must classify as its own source (not 'hooks / system
+    reminders') so the /context roll-up can mirror the Custom agents bucket."""
+    tap = [{
+        "timestamp": "2026-06-19T21:02:44.554578+00:00",
+        "duration_ms": 1000,
+        "model": "claude-sonnet-4-6",
+        "system": [{"type": "text", "text": "You are a Claude agent."}],
+        "tools": [{"name": "Read", "description": "Read files"}],
+        "messages": [{"role": "user", "content": [
+            {"type": "text", "text": "<system-reminder>\nAvailable agent types for the Agent tool:\n- claude: Catch-all.\n- Explore: search.\n</system-reminder>"},
+            {"type": "text", "text": "<system-reminder>\nSome other hook fired.\n</system-reminder>"},
+        ]}],
+        "response": {"usage": {
+            "input_tokens": 10, "cache_read_input_tokens": 20,
+            "cache_creation_input_tokens": 30, "output_tokens": 5,
+        }},
+    }]
+    comps = {row["component"] for row in tap_components(tap)}
+    assert "custom agent definitions" in comps
+    assert "hooks / system reminders" in comps  # the second reminder still classifies normally
+
+
 def test_tap_components_anchored_to_prompt_tokens():
     tap = json.loads(FIX.read_text())
     comps = tap_components(tap)

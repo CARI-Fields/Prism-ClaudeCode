@@ -1,0 +1,16 @@
+model: claude-sonnet-4-6
+reps: 1
+conditions: [goal, ralph_loop]
+tasks: [coding_longhorizon, research_longhorizon]
+paths:
+  data_raw: data/raw
+  claude_projects: ~/.claude/projects
+proxy:
+  host: 127.0.0.1
+  port: 8080
+instrumentation:
+  drkernel_python: /home/yubaifeng/e84381970/envs/drkernel310/bin/python3.10
+  kernelgym_url: http://127.0.0.1:10908
+  ttft_port: 8770
+  ttft_log: /tmp/cc-exp-ttft.jsonl
+  problem_name: 76_Gemm_Add_ReLU

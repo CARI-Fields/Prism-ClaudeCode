@@ -1,0 +1,11 @@
+name: coding_longhorizon
+prompt_file: tasks/coding_longhorizon/prompt.md
+workspace: null
+workspace_seed: tasks/coding_longhorizon/workspace_seed
+kind: coding
+seed_files:
+  - tasks/coding_longhorizon/workspace_seed/check_all.sh
+  - tasks/coding_longhorizon/workspace_seed/reference_1.py
+  - tasks/coding_longhorizon/workspace_seed/reference_2.py
+  - tasks/coding_longhorizon/workspace_seed/reference_3.py
+  - tasks/coding_longhorizon/workspace_seed/reference_4.py

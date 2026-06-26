@@ -43,11 +43,6 @@ def drop_empty_turns(tap: list) -> list:
 def _request_type(turn: dict) -> str:
     system_text = "\n".join(_text_from_content(item) for item in turn.get("system") or [])
     system_lower = system_text.lower()
-    if "security monitor for autonomous ai coding agents" in system_lower:
-        return "security-monitor"
-    if "cc_is_subagent=true" not in system_lower:
-        return "main-agent"
-
     tool_names = {
         tool.get("name") for tool in turn.get("tools") or []
         if isinstance(tool, dict) and isinstance(tool.get("name"), str)
@@ -56,12 +51,24 @@ def _request_type(turn: dict) -> str:
         _message_text(message) for message in turn.get("messages") or []
     ).lower()
 
-    if "workflow orchestration script" in system_lower:
-        return "workflow-subagent"
+    if "security monitor for autonomous ai coding agents" in system_lower:
+        return "security-monitor"
+    # WebSearch / WebFetch each issue their own internal model request. Unlike
+    # Task/Workflow subagents, these helper requests do NOT carry the
+    # cc_is_subagent=true marker, so they must be detected by their own
+    # unambiguous signatures BEFORE the marker-based main-agent fallback below —
+    # otherwise they get swallowed into "main-agent" and pollute its curve.
     if "assistant for performing a web search tool use" in system_lower or "web_search" in tool_names:
         return "web-search-subagent"
     if "web page content:" in message_text:
         return "web-fetch-subagent"
+    if "you are evaluating a stop-condition hook" in system_lower:
+        return "stop-condition-eval"
+    if "cc_is_subagent=true" not in system_lower:
+        return "main-agent"
+
+    if "workflow orchestration script" in system_lower:
+        return "workflow-subagent"
     if "agent for claude code" in system_lower:
         return "task-subagent"
     return "subagent-internal"
@@ -166,6 +173,11 @@ def _classify_message_text(text: str, role: str | None) -> str:
         return "invoked skill bodies"
     if "skill_listing" in lower or "available skills" in lower or "- superpowers:" in text:
         return "skills listing"
+    # The agent registry — Claude Code's /context "Custom agents" bucket. Arrives in
+    # our capture as its own <system-reminder> ("Available agent types for the Agent
+    # tool: ..."); must be caught before the generic system-reminder branch below.
+    if "available agent types for the agent tool" in lower:
+        return "custom agent definitions"
     if "claude.md" in lower or "project instructions" in lower or "path-scoped rules" in lower:
         return "CLAUDE.md / project instructions"
     if "<system-reminder>" in lower or "system-reminder" in lower or "hook" in lower:

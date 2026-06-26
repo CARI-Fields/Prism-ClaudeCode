@@ -18,7 +18,7 @@ from harness.capture.collect_tap import collect_tap
 from harness.capture.collect_ttft import collect_ttft
 from harness.services import ensure_services
 from harness.score.score_research import score_research
-from harness.score.score_coding import score_kernel
+from harness.score.score_coding import score_kernel, score_gauntlet
 
 
 @dataclass(frozen=True)
@@ -42,13 +42,22 @@ def _now() -> datetime:
 
 
 def score_run(task, scratch_dir: Path, exp) -> dict:
+    longhorizon = "longhorizon" in task.name
     if task.kind == "research":
         report = Path(scratch_dir) / "report.md"
         if report.exists():
-            return {"score": score_research(report, task.required_sections)}
+            min_cites = 30 if longhorizon else 12
+            return {"score": score_research(report, task.required_sections, min_citations=min_cites)}
         return {"score": {"success": False, "reason": "no report.md"}}
     if task.kind == "coding":
-        sol = Path(scratch_dir) / "solution.py"
+        scratch = Path(scratch_dir)
+        # gauntlet task: score solution_1..4.py vs reference_1..4.py (geomean)
+        if longhorizon or (scratch / "solution_1.py").exists():
+            try:
+                return {"score": score_gauntlet(scratch, exp.kernelgym_url)}
+            except Exception as exc:
+                return {"score": {"success": None, "reason": f"score error: {exc}"}}
+        sol = scratch / "solution.py"
         ref = Path(__file__).resolve().parents[1] / "tasks" / "coding" / "reference_code.py"
         if sol.exists() and ref.exists():
             try:
