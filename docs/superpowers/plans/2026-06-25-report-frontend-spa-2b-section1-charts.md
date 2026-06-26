@@ -71,7 +71,7 @@ describe('format', () => {
   it('pct and fmtAxis', () => {
     expect(pct(0.873)).toBe('87%');
     expect(pct(0.873, 1)).toBe('87.3%');
-    expect(fmtAxis(2500)).toBe('2k');
+    expect(fmtAxis(2400)).toBe('2k'); // 2.4→"2"; avoid the .5 rounding ambiguity
     expect(fmtAxis(42)).toBe('42');
   });
   it('fmtMetric routes by metric name', () => {
