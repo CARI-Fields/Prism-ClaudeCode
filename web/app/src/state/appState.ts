@@ -27,3 +27,10 @@ export function toggleSection(state: AppState, scope: ScopeKey, dim: Dimension, 
 export function clearSection(state: AppState, scope: ScopeKey, dim: Dimension): AppState {
   return { ...state, [scope]: { ...state[scope], [dim]: [] } };
 }
+// Single-select: replace the dimension with just this token, or clear it ("all")
+// when the token is already the sole selection (re-click toggles off).
+export function selectSectionSingle(state: AppState, scope: ScopeKey, dim: Dimension, token: string): AppState {
+  const sec = state[scope];
+  const next = sec[dim].length === 1 && sec[dim][0] === token ? [] : [token];
+  return { ...state, [scope]: { ...sec, [dim]: next } };
+}
