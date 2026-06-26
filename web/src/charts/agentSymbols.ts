@@ -15,6 +15,8 @@ export const REQUEST_TYPE_SYMBOLS: Record<string, string> = {
   'subagent-internal': 'roundRect',
 };
 
+export const AGENT_TYPE_ORDER = Object.keys(REQUEST_TYPE_SYMBOLS);
+
 export function agentDotSpec(type: string): { size: number; hollow: boolean } {
   const t = type || 'main-agent';
   if (t === 'main-agent') return { size: 6, hollow: false };      // solid circle
