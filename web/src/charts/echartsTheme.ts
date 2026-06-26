@@ -1,3 +1,5 @@
+import { fmtAxis } from './format';
+
 export const INK = '#10151d';
 export const MUTED = '#5c6675';
 export const LINE = '#dde2e9';
@@ -28,7 +30,7 @@ export const TOOLTIP = {
 export function valueAxis(extra: Record<string, unknown> = {}) {
   return {
     type: 'value',
-    axisLabel: axisLabelStyle(),
+    axisLabel: { ...axisLabelStyle(), formatter: fmtAxis },
     splitLine: { lineStyle: { color: LINE, type: 'dashed' } },
     ...extra,
   };
