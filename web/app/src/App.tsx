@@ -4,7 +4,7 @@ import { TokenGate } from './components/TokenGate';
 import { Masthead } from './components/Masthead';
 import { GlobalTaskStrip } from './components/GlobalTaskStrip';
 import { parseHash, toHash } from './state/urlState';
-import { clearSection, clearTask, initState, setReport, toggleSection, toggleTask } from './state/appState';
+import { clearSection, clearTask, initState, selectSectionSingle, setReport, toggleSection, toggleTask } from './state/appState';
 import { BriefBand } from './components/BriefBand';
 import { KpiBand } from './components/KpiBand';
 import { Section1 } from './components/Section1';
@@ -64,6 +64,15 @@ function Dashboard({ manifest, runs, turns, components }: { manifest: Manifest; 
       setState((s) => clearSection(s, scope, dim)),
     [],
   );
+  // §3 is a single-run drilldown: Feature (condition) is single-select; rep/agent stay multi.
+  const s3Toggle = useCallback(
+    (dim: 'condition' | 'rep' | 'agent', token: string) =>
+      setState((s) =>
+        dim === 'condition'
+          ? selectSectionSingle(s, 's3', dim, token)
+          : toggleSection(s, 's3', dim, token)),
+    [],
+  );
 
   if (!variant) return null;
   return (
@@ -80,7 +89,7 @@ function Dashboard({ manifest, runs, turns, components }: { manifest: Manifest; 
         <KpiBand runs={scopeRuns(runs, state.task, { condition: [], rep: [], agent: [] })} />
         <Section1 variant={variant} state={state} runs={scopeRuns(runs, state.task, { condition: [], rep: [], agent: [] })} onToggle={sectionToggle('s1')} onClear={sectionClear('s1')} />
         <Section2 variant={variant} state={state} turns={scopeTurns(turns, state.task, state.s2)} reps={reps} agentTypes={agents2} onToggle={sectionToggle('s2')} onClear={sectionClear('s2')} />
-        <Section3 variant={variant} state={state} runs={scopeRuns(runs, state.task, state.s3)} turns={scopeTurns(turns, state.task, state.s3)} reps={reps} agentTypes={agents3} components={components} onToggle={sectionToggle('s3')} onClear={sectionClear('s3')} />
+        <Section3 variant={variant} state={state} runs={scopeRuns(runs, state.task, state.s3)} turns={scopeTurns(turns, state.task, state.s3)} reps={reps} agentTypes={agents3} components={components} onToggle={s3Toggle} onClear={sectionClear('s3')} />
       </main>
     </>
   );
