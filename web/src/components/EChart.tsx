@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
-import * as echarts from 'echarts';
+import { echarts } from '../charts/echartsCore';
+import type { ECharts } from 'echarts/core';
 
 export function EChart({ option, className }: { option: unknown; className?: string }) {
   const elRef = useRef<HTMLDivElement | null>(null);
-  const chartRef = useRef<echarts.ECharts | null>(null);
+  const chartRef = useRef<ECharts | null>(null);
 
   useEffect(() => {
     if (!elRef.current) return;
@@ -15,7 +16,7 @@ export function EChart({ option, className }: { option: unknown; className?: str
   }, []);
 
   useEffect(() => {
-    chartRef.current?.setOption(option as echarts.EChartsOption, true);
+    chartRef.current?.setOption(option as Parameters<ECharts['setOption']>[0], true);
   }, [option]);
 
   return <div ref={elRef} className={className ?? 'chart'} />;
