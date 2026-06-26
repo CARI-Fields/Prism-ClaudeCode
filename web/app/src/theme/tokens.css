@@ -25,3 +25,10 @@ body { margin: 0; background: var(--app-bg); color: var(--app-ink); font-family:
 .app-rail { background: var(--app-rail-bg); border-right: 1px solid var(--app-line); padding: 16px 14px; min-height: calc(100vh - 50px); position: sticky; top: 0; align-self: start; }
 .app-canvas { padding: 20px 24px 56px; max-width: 1280px; }
 @media (max-width: 880px) { .app-body { grid-template-columns: 1fr; } .app-rail { position: static; min-height: 0; } }
+
+.rail-top, .rail-head { display: flex; align-items: center; justify-content: space-between; }
+.rail-title { font-family: var(--app-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--app-muted); }
+.rail-group { margin: 14px 0; }
+.rail-name { font-family: var(--app-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--app-ink); font-weight: 600; }
+.rail-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.rail-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; display: inline-block; }
