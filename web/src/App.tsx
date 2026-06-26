@@ -80,7 +80,7 @@ function Dashboard({ manifest, runs, turns }: { manifest: Manifest; runs: Run[];
         <KpiBand runs={scopeRuns(runs, state.task, { condition: [], rep: [], agent: [] })} />
         <Section1 variant={variant} state={state} runs={scopeRuns(runs, state.task, { condition: [], rep: [], agent: [] })} onToggle={sectionToggle('s1')} onClear={sectionClear('s1')} />
         <Section2 variant={variant} state={state} turns={scopeTurns(turns, state.task, state.s2)} reps={reps} agentTypes={agents2} onToggle={sectionToggle('s2')} onClear={sectionClear('s2')} />
-        <Section3 variant={variant} state={state} reps={reps} agentTypes={agents3} onToggle={sectionToggle('s3')} onClear={sectionClear('s3')} />
+        <Section3 variant={variant} state={state} runs={scopeRuns(runs, state.task, state.s3)} turns={scopeTurns(turns, state.task, state.s3)} reps={reps} agentTypes={agents3} onToggle={sectionToggle('s3')} onClear={sectionClear('s3')} />
       </main>
     </>
   );
