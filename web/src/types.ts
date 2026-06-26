@@ -3,6 +3,11 @@ export interface Run {
   success: boolean; speedup: number | null; total_cost_usd: number | null;
   num_requests: number | null; cache_hit_ratio: number | null;
   quality_score: number | null; research_rubric_score: number | null;
+  completion_time_s?: number | null;
+  cost_efficiency_score?: number | null;
+  total_cache_read?: number | null;
+  peak_prompt_tokens?: number | null;
+  output_tokens_total?: number | null;
   [key: string]: unknown;
 }
 export interface Turn {
