@@ -2,21 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { parseHash, toHash } from './urlState';
 
 describe('urlState', () => {
-  it('serializes report + task with raw commas', () => {
-    expect(toHash({ report: 'multi_agent', task: ['coding', 'research'] }))
-      .toBe('#report=multi_agent&task=coding,research');
+  it('round-trips report/theme/view/filter', () => {
+    const u = { report: 'r1', theme: 'dark' as const, view: 's2' as const,
+      filter: { task: ['coding'], condition: ['goal', 'subagents'], rep: ['r1'], agent: [] } };
+    expect(parseHash(toHash(u))).toEqual({
+      report: 'r1', theme: 'dark', view: 's2',
+      filter: { task: ['coding'], condition: ['goal', 'subagents'], rep: ['r1'], agent: [] },
+    });
   });
-  it('omits empty task', () => {
-    expect(toHash({ report: 'long_horizon', task: [] })).toBe('#report=long_horizon');
+  it('parses a minimal hash', () => {
+    expect(parseHash('#report=r1')).toEqual({ report: 'r1', theme: null, view: null, filter: { task: [], condition: [], rep: [], agent: [] } });
   });
-  it('round-trips', () => {
-    const u = { report: 'multi_agent', task: ['coding'] };
-    expect(parseHash(toHash(u))).toEqual(u);
-  });
-  it('parses empty hash', () => {
-    expect(parseHash('')).toEqual({ report: null, task: [] });
-  });
-  it('tolerates leading # and missing keys', () => {
-    expect(parseHash('#report=long_horizon')).toEqual({ report: 'long_horizon', task: [] });
+  it('empty state → empty hash', () => {
+    expect(toHash({ report: null, theme: null, view: null, filter: { task: [], condition: [], rep: [], agent: [] } })).toBe('');
   });
 });

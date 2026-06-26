@@ -21,19 +21,19 @@ function firstVariantKey(manifest: Manifest, fromUrl: string | null): string {
 function Dashboard({ manifest, runs, turns, components }: { manifest: Manifest; runs: Run[]; turns: Turn[]; components: Component[] }) {
   const [state, setState] = useState<AppState>(() => {
     const url = parseHash(window.location.hash);
-    return initState(firstVariantKey(manifest, url.report), url.task);
+    return initState(firstVariantKey(manifest, url.report), url.filter.task);
   });
 
   // Sync report + task to the URL hash.
   useEffect(() => {
-    const next = toHash({ report: state.report, task: state.task });
+    const next = toHash({ report: state.report, theme: null, view: null, filter: { task: state.task, condition: [], rep: [], agent: [] } });
     if (next !== window.location.hash) window.history.replaceState(null, '', next || window.location.pathname);
   }, [state.report, state.task]);
 
   useEffect(() => {
     const onHash = () => {
       const url = parseHash(window.location.hash);
-      setState((s) => (url.report && url.report !== s.report ? initState(url.report, url.task) : { ...s, task: url.task }));
+      setState((s) => (url.report && url.report !== s.report ? initState(url.report, url.filter.task) : { ...s, task: url.filter.task }));
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
