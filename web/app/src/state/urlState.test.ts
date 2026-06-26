@@ -16,4 +16,10 @@ describe('urlState', () => {
   it('empty state → empty hash', () => {
     expect(toHash({ report: null, theme: null, view: null, filter: { task: [], condition: [], rep: [], agent: [] } })).toBe('');
   });
+  it('rejects invalid theme/view to null', () => {
+    expect(parseHash('#theme=bogus').theme).toBe(null);
+    expect(parseHash('#theme=DARK').theme).toBe(null);
+    expect(parseHash('#view=dashboard').view).toBe(null);
+    expect(parseHash('#view=S1').view).toBe(null);
+  });
 });
