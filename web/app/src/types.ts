@@ -39,11 +39,20 @@ export interface Manifest {
   available: { task: string; condition: string; runs: number }[];
 }
 
+export type ViewKey = 'overview' | 's1' | 's2' | 's3';
+export type ThemeMode = 'light' | 'dark';
+export type FilterDim = 'task' | 'condition' | 'rep' | 'agent';
+export interface GlobalFilter { task: string[]; condition: string[]; rep: string[]; agent: string[]; }
+export interface SectionSel { condition: string[]; rep: string[]; agent: string[]; }
+export interface UiState {
+  report: string;
+  theme: ThemeMode;
+  view: ViewKey;
+  filter: GlobalFilter;
+  overrides: Partial<Record<ViewKey, Partial<GlobalFilter>>>;
+}
+
+// @deprecated until T15 cutover
 export type Dimension = 'condition' | 'rep' | 'agent';
 export type ScopeKey = 's1' | 's2' | 's3';
-export interface SectionSel { condition: string[]; rep: string[]; agent: string[]; }
-export interface AppState {
-  report: string;
-  task: string[];
-  s1: SectionSel; s2: SectionSel; s3: SectionSel;
-}
+export interface AppState { report: string; task: string[]; s1: SectionSel; s2: SectionSel; s3: SectionSel; }
