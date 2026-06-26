@@ -1,6 +1,6 @@
 import threading, time
 import uvicorn
-from harness.services import health
+from experiment.harness.services import health
 
 
 class _S(uvicorn.Server):

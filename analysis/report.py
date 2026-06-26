@@ -19,7 +19,7 @@ def generate(raw_dir, processed_dir, figures_dir, report_path) -> Path:
     counts = build_all(raw_dir, processed_dir)
     if counts.get("runs", 0) == 0:
         report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text("# Experiment Report\n\nNo runs found in data/raw.\n")
+        report_path.write_text("# Experiment Report\n\nNo runs found in analysis/data/raw.\n")
         return report_path
     turns = pd.read_parquet(processed_dir / "turns.parquet")
     comps = pd.read_parquet(processed_dir / "components.parquet")

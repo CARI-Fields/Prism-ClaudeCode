@@ -10,7 +10,7 @@ from starlette.applications import Starlette
 from starlette.responses import StreamingResponse
 from starlette.routing import Route
 
-from harness.capture.ttft_parse import SseTimer
+from experiment.harness.capture.ttft_parse import SseTimer
 
 
 def make_app(upstream: str, out_path: Path) -> Starlette:

@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 import uvicorn
 
-from harness.capture.ttft_proxy import make_app
+from experiment.harness.capture.ttft_proxy import make_app
 
 
 class _Server(uvicorn.Server):

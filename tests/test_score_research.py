@@ -1,5 +1,5 @@
 from pathlib import Path
-from harness.score.score_research import score_research, count_citations
+from experiment.harness.score.score_research import score_research, count_citations
 
 
 def test_count_citations_distinct():

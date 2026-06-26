@@ -1,3 +1,3 @@
 def test_harness_imports():
-    import harness
-    assert hasattr(harness, "__version__")
+    import experiment.harness
+    assert hasattr(experiment.harness, "__version__")
