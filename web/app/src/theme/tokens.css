@@ -32,3 +32,12 @@ body { margin: 0; background: var(--app-bg); color: var(--app-ink); font-family:
 .rail-name { font-family: var(--app-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--app-ink); font-weight: 600; }
 .rail-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .rail-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; display: inline-block; }
+
+.kpi-row { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+.kpi-card { border-left: 3px solid var(--app-muted); }
+.kpi-label { font-family: var(--app-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--app-muted); }
+.kpi-value { font-family: var(--app-mono); font-size: 24px; font-weight: 600; margin-top: 6px; }
+.overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+.panel-card { min-width: 0; } .panel-title { font-size: 14.5px; font-weight: 600; margin: 0 0 8px; }
+.strategy-legend { list-style: none; padding: 0; margin: 10px 0 0; } .strategy-legend li { margin: 6px 0; color: var(--app-muted); }
+@media (max-width: 880px) { .kpi-row { grid-template-columns: repeat(2,1fr); } .overview-grid { grid-template-columns: 1fr; } }
