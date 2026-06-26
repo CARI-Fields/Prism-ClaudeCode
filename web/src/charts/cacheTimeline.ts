@@ -16,7 +16,7 @@ export function cacheByAgent(turns: Turn[]): CacheRow[] {
   const groups = new Map<string, Turn[]>();
   for (const t of turns) {
     if (!t.run_id) continue;
-    const type = String(t.request_type ?? 'main-agent');
+    const type = String(t.request_type || 'main-agent');
     const key = `${t.run_id} ${type}`;
     let arr = groups.get(key);
     if (!arr) { arr = []; groups.set(key, arr); }
@@ -34,7 +34,7 @@ export function cacheByAgent(turns: Turn[]): CacheRow[] {
       ordinal += 1;
       rows.push({
         run_id: t.run_id, task: t.task, condition: t.condition, rep: t.rep,
-        request_type: String(t.request_type ?? 'main-agent'),
+        request_type: String(t.request_type || 'main-agent'),
         request_index: t.request_index, ordinal,
         accumulated_cache_hit_rate: denom ? cumRead / denom : null,
         cum_cache_read: cumRead, cum_context_tokens: denom,
