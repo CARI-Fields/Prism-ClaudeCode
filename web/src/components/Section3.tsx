@@ -1,18 +1,25 @@
 import { useState } from 'react';
-import type { AppState, Variant } from '../types';
+import type { AppState, Run, Turn, Variant } from '../types';
 import { FilterChunk } from './FilterChunk';
 import { conditionColor } from '../theme';
+import { EChart } from './EChart';
+import { orderedRequests } from '../charts/ordered';
+import { AGENT_TYPE_ORDER } from '../charts/agentSymbols';
+import { costTimelineOption } from '../charts/costTimeline';
 
 interface Props {
-  variant: Variant; state: AppState; reps: string[]; agentTypes: string[];
+  variant: Variant; state: AppState; runs: Run[]; turns: Turn[]; reps: string[]; agentTypes: string[];
   onToggle: (dim: 'condition' | 'rep' | 'agent', token: string) => void;
   onClear: (dim: 'condition' | 'rep' | 'agent') => void;
 }
-export function Section3({ variant, state, reps, agentTypes, onToggle, onClear }: Props) {
+export function Section3({ variant, state, runs, turns, reps, agentTypes, onToggle, onClear }: Props) {
   const [compose, setCompose] = useState('context');
   const [group, setGroup] = useState('agent');
   const [hitrate, setHitrate] = useState(true);
   const [density, setDensity] = useState(100);
+
+  const singleAgent = state.s3.agent.length === 1 ? state.s3.agent[0] : 'all';
+
   return (
     <section className="band band-run">
       <div className="band-head">
@@ -48,7 +55,22 @@ export function Section3({ variant, state, reps, agentTypes, onToggle, onClear }
         </div>
       </div>
       <div className="band-scope row">One block per run in this section's Feature × Rollout.</div>
-      <div id="drilldown-runs" className="drilldown-runs" />
+      <div id="drilldown-runs" className="drilldown-runs">
+        {runs.map((run) => {
+          const rowsForRun = turns.filter((t) => t.run_id === run.run_id)
+            .sort((a, b) => a.request_index - b.request_index);
+          const typeByIndex = new Map<number, string>(rowsForRun.map((t, i) => [i, t.request_type ?? 'main-agent']));
+          const ordered = orderedRequests(typeByIndex, rowsForRun.map((_, i) => i), singleAgent, group, AGENT_TYPE_ORDER);
+          const barMaxWidth = Math.max(6, Math.round(6 + 40 * (density / 100)));
+          return (
+            <article className="panel drilldown-run" key={run.run_id}>
+              <div className="panel-head"><h2>{run.task} / {run.condition} / r{run.rep}</h2><span className="run-tag">{run.run_id}</span></div>
+              <h3 className="drill-sub">Per-Run Request Cost Timeline</h3>
+              <EChart className="chart" option={costTimelineOption(rowsForRun, ordered, barMaxWidth)} />
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
