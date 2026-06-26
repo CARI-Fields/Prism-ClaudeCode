@@ -1,13 +1,25 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from web.api import queries
 from web.api.auth import require_token
 from web.api.config import get_settings
+from web.api.data_source import ensure_data
 
-app = FastAPI(title="CC experiment report API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pull the parquet from the private dataset into DATA_DIR (no-op locally).
+    s = get_settings()
+    ensure_data(s.data_dir, s.hf_dataset_repo, s.hf_token)
+    yield
+
+
+app = FastAPI(title="CC experiment report API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
