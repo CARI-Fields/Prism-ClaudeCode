@@ -17,8 +17,8 @@ const turns = [
 
 describe('Section3 cost timeline', () => {
   it('renders one block (with a cost-timeline chart) per scoped run', () => {
-    render(<Section3 variant={variant} state={initState('multi_agent', ['coding'])} runs={runs} turns={turns} reps={['r1', 'r2']} agentTypes={['main-agent']} onToggle={() => {}} onClear={() => {}} />);
-    expect(screen.getAllByTestId('echart')).toHaveLength(2); // 2 runs -> 2 cost-timeline charts
+    render(<Section3 variant={variant} state={initState('multi_agent', ['coding'])} runs={runs} turns={turns} reps={['r1', 'r2']} agentTypes={['main-agent']} components={[]} onToggle={() => {}} onClear={() => {}} />);
+    expect(screen.getAllByTestId('echart')).toHaveLength(4); // 2 runs -> 2 cost-timeline + 2 breakdown charts
     expect(screen.getByText('a')).toBeInTheDocument(); // run-tag run_id
     expect(screen.getAllByText('Per-Run Request Cost Timeline')).toHaveLength(2);
   });
