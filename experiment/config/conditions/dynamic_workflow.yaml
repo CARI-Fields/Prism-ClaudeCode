@@ -1,3 +1,3 @@
 name: dynamic_workflow
-launcher: harness/conditions/dynamic_workflow.sh
+launcher: experiment/harness/conditions/dynamic_workflow.sh
 description: Workflow-style orchestration; many short-lived subagents.

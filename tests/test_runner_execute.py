@@ -2,9 +2,9 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-import harness.runner as R
-from harness.config import ExperimentConfig, TaskConfig, ConditionConfig
-from harness.runner import plan_run, execute
+import experiment.harness.runner as R
+from experiment.harness.config import ExperimentConfig, TaskConfig, ConditionConfig
+from experiment.harness.runner import plan_run, execute
 
 
 def _exp(tmp):

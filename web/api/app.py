@@ -3,9 +3,9 @@ from __future__ import annotations
 from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from serve import queries
-from serve.auth import require_token
-from serve.config import get_settings
+from web.api import queries
+from web.api.auth import require_token
+from web.api.config import get_settings
 
 app = FastAPI(title="CC experiment report API")
 

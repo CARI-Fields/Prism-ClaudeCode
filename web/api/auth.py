@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import Header, HTTPException, status
 
-from serve.config import get_settings
+from web.api.config import get_settings
 
 
 def require_token(authorization: str | None = Header(default=None)) -> None:

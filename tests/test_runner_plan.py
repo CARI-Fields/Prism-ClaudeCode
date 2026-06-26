@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
-from harness.config import (
+from experiment.harness.config import (
     ExperimentConfig, TaskConfig, ConditionConfig,
 )
-from harness.runner import plan_run
+from experiment.harness.runner import plan_run
 
 
 def _exp(tmp):

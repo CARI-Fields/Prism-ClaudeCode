@@ -1,5 +1,5 @@
 name: research
-prompt_file: tasks/research/prompt.md
+prompt_file: experiment/tasks/research/prompt.md
 workspace: null
 workspace_seed: null
 kind: research

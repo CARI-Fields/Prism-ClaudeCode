@@ -33,7 +33,7 @@ def load_experiment(path: Path) -> ExperimentConfig:
         reps=int(data["reps"]),
         conditions=list(data["conditions"]),
         tasks=list(data["tasks"]),
-        data_raw=Path(paths.get("data_raw", "data/raw")),
+        data_raw=Path(paths.get("data_raw", "analysis/data/raw")),
         claude_projects=Path(paths.get("claude_projects", "~/.claude/projects")).expanduser(),
         proxy_host=proxy.get("host", "127.0.0.1"),
         proxy_port=int(proxy.get("port", 8080)),

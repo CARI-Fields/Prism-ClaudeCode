@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from harness.capture.collect_ttft import collect_ttft
+from experiment.harness.capture.collect_ttft import collect_ttft
 
 
 def test_collect_ttft_filters_window(tmp_path: Path):

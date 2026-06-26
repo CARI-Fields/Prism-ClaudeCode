@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from harness.capture.collect_transcripts import (
+from experiment.harness.capture.collect_transcripts import (
     encode_project_dir, find_new_sessions, collect,
 )
 

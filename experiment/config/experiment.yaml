@@ -3,7 +3,7 @@ reps: 3
 conditions: [single_agent, goal, subagents, ralph_loop, dynamic_workflow, loop_dynamic]
 tasks: [coding, research]
 paths:
-  data_raw: data/raw
+  data_raw: analysis/data/raw
   claude_projects: ~/.claude/projects
 proxy:
   host: 127.0.0.1
