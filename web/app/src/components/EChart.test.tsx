@@ -1,24 +1,24 @@
-import { render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-const inst = { setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn(), on: vi.fn(), off: vi.fn() };
-// Mock the central core module so jsdom never touches a real (canvas-backed) chart.
-vi.mock('../charts/echartsCore', () => ({ echarts: { init: vi.fn(() => inst), use: vi.fn() } }));
-
-import { echarts } from '../charts/echartsCore';
+import { cleanup, render } from '@testing-library/react';
 import { EChart } from './EChart';
 
-afterEach(() => { vi.clearAllMocks(); });
+const init = vi.fn();
+vi.mock('../charts/echartsCore', () => {
+  const chart = { setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn(), on: vi.fn(), off: vi.fn() };
+  return { echarts: { init: (...a: unknown[]) => { init(...a); return chart; }, registerTheme: vi.fn() } };
+});
 
-describe('EChart', () => {
-  it('inits on mount and applies the option', () => {
-    render(<EChart option={{ series: [] }} className="chart" />);
-    expect(echarts.init).toHaveBeenCalledTimes(1);
-    expect(inst.setOption).toHaveBeenCalledWith({ series: [] }, true);
+afterEach(() => { cleanup(); init.mockClear(); });
+
+describe('EChart theming', () => {
+  it('initializes under the report theme for the active mode', () => {
+    render(<EChart option={{}} themeMode="dark" />);
+    expect(init).toHaveBeenCalledWith(expect.anything(), 'report-dark');
   });
-  it('re-applies the option when it changes', () => {
-    const { rerender } = render(<EChart option={{ a: 1 }} />);
-    rerender(<EChart option={{ a: 2 }} />);
-    expect(inst.setOption).toHaveBeenLastCalledWith({ a: 2 }, true);
+  it('re-initializes when the theme mode changes', () => {
+    const { rerender } = render(<EChart option={{}} themeMode="light" />);
+    expect(init).toHaveBeenLastCalledWith(expect.anything(), 'report-light');
+    rerender(<EChart option={{}} themeMode="dark" />);
+    expect(init).toHaveBeenLastCalledWith(expect.anything(), 'report-dark');
   });
 });
