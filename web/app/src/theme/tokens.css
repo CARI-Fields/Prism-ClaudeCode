@@ -1,0 +1,23 @@
+/* App design tokens, layered on Blueprint. Light is default; .bp5-dark overrides. */
+:root {
+  --app-bg:        #eceef2;
+  --app-panel:     #ffffff;
+  --app-ink:       #10151d;
+  --app-muted:     #5c6675;
+  --app-line:      #dde2e9;
+  --app-rail-bg:   #f4f6f9;
+  --app-radius:    8px;
+  --app-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --app-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.bp5-dark {
+  --app-bg:        #1b2027;
+  --app-panel:     #252b34;
+  --app-ink:       #e7ecf3;
+  --app-muted:     #9aa6b4;
+  --app-line:      #38404b;
+  --app-rail-bg:   #20262e;
+}
+html, body, #root { height: 100%; }
+body { margin: 0; background: var(--app-bg); color: var(--app-ink); font-family: var(--app-sans); }
+.app-root { min-height: 100%; background: var(--app-bg); }
