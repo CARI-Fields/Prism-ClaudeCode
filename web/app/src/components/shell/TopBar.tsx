@@ -2,6 +2,7 @@ import { Alignment, Button, Navbar, Switch, Tab, Tabs } from '@blueprintjs/core'
 import type { Manifest } from '../../types';
 import { useReport, useTheme } from '../../state/AppStateProvider';
 import { useData } from '../../data/DataContext';
+import { ExportControl } from '../../export/ExportControl';
 
 export function TopBar({ manifest }: { manifest: Manifest }) {
   const { report, setReport } = useReport();
@@ -18,6 +19,8 @@ export function TopBar({ manifest }: { manifest: Manifest }) {
         )}
       </Navbar.Group>
       <Navbar.Group align={Alignment.RIGHT}>
+        <ExportControl />
+        <Navbar.Divider />
         <Switch
           checked={mode === 'dark'}
           onChange={toggle}
