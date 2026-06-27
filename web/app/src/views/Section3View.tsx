@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Card, Checkbox, Elevation, HTMLSelect, Slider, Tag } from '@blueprintjs/core';
+import { Card, Checkbox, Elevation, HTMLSelect, Slider } from '@blueprintjs/core';
 import { useData } from '../data/DataContext';
 import { useFilter, useReport, useTheme } from '../state/AppStateProvider';
 import { scopeRuns, scopeTurns } from '../data/filters';
+import { taskLabel } from '../data/taskLabel';
 import { EChart } from '../components/EChart';
 import { orderedRequests } from '../charts/ordered';
 import { AGENT_TYPE_ORDER } from '../charts/agentSymbols';
@@ -15,7 +16,7 @@ import type { CtxSelection } from '../components/ContextTextPanel';
 export function Section3View() {
   const { data } = useData();
   const { report } = useReport();
-  const { effective, effectiveTask, setOverrideSingle } = useFilter();
+  const { effective, effectiveTask } = useFilter();
   const { mode } = useTheme();
   const [compose, setCompose] = useState('context');
   const [group, setGroup] = useState('agent');
@@ -35,23 +36,7 @@ export function Section3View() {
   return (
     <div className="view view-stack">
       <Card elevation={Elevation.ZERO} className="panel-card">
-        <div className="rail-head"><span className="rail-name">Feature (single run)</span></div>
-        <div className="rail-chips">
-          {variant.conditions.map((c) => (
-            <Tag
-              key={c}
-              interactive
-              round
-              minimal={!s3.condition.includes(c)}
-              intent={s3.condition.includes(c) ? 'primary' : 'none'}
-              role="button"
-              aria-pressed={s3.condition.includes(c)}
-              onClick={() => setOverrideSingle('s3', 'condition', c)}
-            >
-              {c}
-            </Tag>
-          ))}
-        </div>
+        <div className="rail-head"><span className="rail-name">Display</span></div>
         <div className="s3-controls">
           <label>
             bar density
@@ -90,6 +75,8 @@ export function Section3View() {
           AGENT_TYPE_ORDER
         );
         const barMaxWidth = Math.max(6, Math.round(6 + 40 * (density / 100)));
+        // Denser bars pack tighter: gap shrinks as the bars widen (and vice-versa).
+        const barCategoryGap = `${Math.round(60 - 52 * (density / 100))}%`;
         const bd = breakdownData(
           mdef,
           rowsForRun,
@@ -100,7 +87,7 @@ export function Section3View() {
           <Card elevation={Elevation.ZERO} className="panel-card" key={run.run_id}>
             <div className="panel-head">
               <h2 className="panel-title">
-                {run.task} / {run.condition} / r{run.rep}
+                {taskLabel(run.task)} / {run.condition} / r{run.rep}
               </h2>
               <span className="run-tag">{run.run_id}</span>
             </div>
@@ -108,7 +95,7 @@ export function Section3View() {
             <EChart
               className="chart"
               themeMode={mode}
-              option={costTimelineOption(rowsForRun, ordered, barMaxWidth)}
+              option={costTimelineOption(rowsForRun, ordered, barMaxWidth, barCategoryGap)}
             />
             <h3 className="cache-sub">Context Source Breakdown</h3>
             <EChart

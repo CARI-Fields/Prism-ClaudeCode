@@ -1,4 +1,5 @@
 import type { Run } from '../types';
+import { taskLabel } from '../data/taskLabel';
 
 const CODE = { missing: 0, failed: 1, success: 2, skipped: 3 } as const;
 type Status = keyof typeof CODE;
@@ -12,12 +13,12 @@ export interface MatrixCell {
 
 export function matrixData(runs: Run[], tasks: string[], reps: number[], conditions: string[]) {
   const rows: string[] = [];
-  for (const task of tasks) for (const rep of reps) rows.push(`${task} r${rep}`);
+  for (const task of tasks) for (const rep of reps) rows.push(`${taskLabel(task)} r${rep}`);
   const cols = [...conditions];
   const cells: MatrixCell[] = [];
   for (const task of tasks) for (const rep of reps) for (const condition of conditions) {
     const match = runs.filter((r) => r.task === task && r.condition === condition && r.rep === rep);
-    const row = `${task} r${rep}`;
+    const row = `${taskLabel(task)} r${rep}`;
     if (match.length === 0) {
       cells.push({ task, condition, rep, row, status: 'missing', status_code: CODE.missing });
       continue;

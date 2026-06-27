@@ -5,6 +5,7 @@ import { useFilter, useReport } from '../../state/AppStateProvider';
 import { useData } from '../../data/DataContext';
 import { conditionColor } from '../../theme';
 import { presentAgentTypes } from '../../data/filters';
+import { taskLabel } from '../../data/taskLabel';
 
 export function FilterRail() {
   const { report } = useReport();
@@ -21,7 +22,7 @@ export function FilterRail() {
     <div className="rail">
       <div className="rail-top"><span className="rail-title">Filters</span>
         {anyActive ? <Button minimal small text="Reset all" onClick={() => { clear('task'); clear('condition'); clear('rep'); clear('agent'); }} /> : null}</div>
-      <RailFilterGroup label="Task" items={variant.tasks} active={filter.task} onToggle={(t) => toggle('task', t)} onClear={() => clear('task')} />
+      <RailFilterGroup label="Task" items={variant.tasks} active={filter.task} labelFor={taskLabel} onToggle={(t) => toggle('task', t)} onClear={() => clear('task')} />
       <RailFilterGroup label="Feature" items={variant.conditions} active={filter.condition} dotFor={conditionColor} onToggle={(t) => toggle('condition', t)} onClear={() => clear('condition')} />
       <RailFilterGroup label="Rollout" items={reps} active={filter.rep} onToggle={(t) => toggle('rep', t)} onClear={() => clear('rep')} />
       <RailFilterGroup label="Agent" items={agents} active={filter.agent} onToggle={(t) => toggle('agent', t)} onClear={() => clear('agent')} />
