@@ -382,3 +382,11 @@ body {
     50%      { box-shadow: 0 0 0 5px transparent; }
   }
 }
+
+/* ============================================================================
+   Run Picker — per-run export checklist
+   ========================================================================== */
+.run-picker { display: flex; flex-direction: column; gap: 12px; min-width: 360px; }
+.run-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--app-line); }
+.run-picker-list { display: flex; flex-direction: column; gap: 2px; max-height: 360px; overflow: auto; font-family: var(--app-mono); font-size: 12px; }
+.run-picker-error { color: #e03131; font-size: 12px; margin: 0; }
