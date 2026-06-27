@@ -2,7 +2,6 @@ import type { EChartsOption } from 'echarts';
 import type { MetricRow, OverheadRow } from './conditionMetrics';
 import type { MatrixCell } from './matrix';
 import {
-  MUTED, MONO, INK,
   STATUS_COLORS, STATUS_GLYPHS, PALETTE,
   baseTextStyle, axisLabelStyle, TOOLTIP,
   valueAxis, catAxis, xName, yName, rightLegend, bottomLegend,
@@ -56,13 +55,12 @@ export function matrixOption(m: {
         label: {
           show: true,
           color: '#ffffff',
-          fontFamily: MONO,
           fontSize: 13,
           fontWeight: 600,
           formatter: (p: { data: [number, number, number] }) => STATUS_GLYPHS[p.data[2]] ?? '',
         },
         itemStyle: { borderColor: '#ffffff', borderWidth: 3 },
-        emphasis: { itemStyle: { borderColor: INK, borderWidth: 1 } },
+        emphasis: { itemStyle: { borderWidth: 1 } },
       },
     ],
   } as unknown as EChartsOption;
@@ -103,9 +101,7 @@ export function conditionOption(
       label: {
         show: !grouped,
         position: 'top' as const,
-        fontFamily: MONO,
         fontSize: 11,
-        color: MUTED,
         formatter: (p: { value: number | null }) => fmtMetric(p.value, metric),
       },
     };
@@ -161,9 +157,7 @@ export function overheadOption(
       label: {
         show: !grouped,
         position: 'top' as const,
-        fontFamily: MONO,
         fontSize: 11,
-        color: MUTED,
         formatter: (p: { value: number | null }) =>
           p.value === null ? '' : `${fmt(p.value, 2)}×`,
       },
@@ -175,11 +169,9 @@ export function overheadOption(
               label: {
                 position: 'end',
                 formatter: '1.0× baseline',
-                fontFamily: MONO,
                 fontSize: 10,
-                color: MUTED,
               },
-              lineStyle: { type: 'dashed', color: MUTED },
+              lineStyle: { type: 'dashed' },
             }
           : undefined,
     };

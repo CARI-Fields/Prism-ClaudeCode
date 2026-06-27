@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Callout, Card } from '@blueprintjs/core';
 import { getComponentTexts } from '../api/client';
 import type { ComponentText } from '../types';
 import { fmt } from '../charts/format';
@@ -17,7 +18,13 @@ export function ContextTextPanel({ runId, selection }: { runId: string; selectio
   }, [selection, runId, texts]);
 
   if (!selection) {
-    return <div className="ctx-text-panel"><div className="ctx-empty">Click a stacked segment above to view the text captured for that context part.</div></div>;
+    return (
+      <Card className="ctx-text-panel">
+        <Callout intent="none" className="ctx-empty">
+          Click a stacked segment above to view the text captured for that context part.
+        </Callout>
+      </Card>
+    );
   }
   const lookup = new Map<string, ComponentText>();
   for (const r of texts ?? []) {
@@ -25,7 +32,7 @@ export function ContextTextPanel({ runId, selection }: { runId: string; selectio
   }
   const entry = lookup.get(`${runId}|${selection.requestIndex}|${selection.component}`) ?? lookup.get(`${runId}|*|${selection.component}`);
   return (
-    <div className="ctx-text-panel">
+    <Card className="ctx-text-panel">
       <div className="ctx-head">
         <b>{selection.component}</b>
         <span>request #{selection.requestIndex + 1}</span>
@@ -36,6 +43,6 @@ export function ContextTextPanel({ runId, selection }: { runId: string; selectio
       {entry && entry.text
         ? <pre className="ctx-body">{entry.text}</pre>
         : <div className="ctx-empty">{texts === null ? 'Loading…' : 'No captured text for this part (it may be externalized or empty).'}</div>}
-    </div>
+    </Card>
   );
 }
