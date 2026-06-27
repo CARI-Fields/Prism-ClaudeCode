@@ -443,3 +443,8 @@ body {
 .run-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--app-line); }
 .run-picker-list { display: flex; flex-direction: column; gap: 2px; max-height: 360px; overflow: auto; font-family: var(--app-mono); font-size: 12px; }
 .run-picker-error { color: #e03131; font-size: 12px; margin: 0; }
+.run-filter-bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-start; padding-bottom: 12px; margin-bottom: 4px; border-bottom: 1px solid var(--app-line); }
+.run-filter-bar .bp5-input-group { min-width: 170px; }
+.run-picker-selinfo { display: flex; align-items: center; gap: 12px; }
+.run-picker-count { font-family: var(--app-mono); font-size: 11px; color: var(--app-muted); }
+.run-picker-empty { margin: 10px 0; color: var(--app-muted); font-family: var(--app-mono); font-size: 12px; }
