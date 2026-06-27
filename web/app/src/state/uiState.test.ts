@@ -41,4 +41,12 @@ describe('uiState reducers', () => {
     expect(effectiveSel(s, 's1')).toEqual({ condition: ['goal'], rep: ['r1'], agent: [] });
     expect(effectiveSel(s, 's3')).toEqual({ condition: ['subagents'], rep: ['r1'], agent: [] });
   });
+  it('a cleared §3 override falls back to the global filter (no shadowing)', () => {
+    let s = toggleFilter(base, 'condition', 'goal');            // global condition = ['goal']
+    s = setOverrideSingle(s, 's3', 'condition', 'subagents');   // §3 pinned to ['subagents']
+    expect(effectiveSel(s, 's3').condition).toEqual(['subagents']);
+    s = setOverrideSingle(s, 's3', 'condition', 'subagents');   // re-click → clears to []
+    expect(s.overrides.s3?.condition).toEqual([]);              // still stores []
+    expect(effectiveSel(s, 's3').condition).toEqual(['goal']);  // but falls back to global
+  });
 });

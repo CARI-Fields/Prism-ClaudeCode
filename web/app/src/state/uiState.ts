@@ -30,11 +30,12 @@ export function setOverrideSingle(s: UiState, view: ViewKey, dim: FilterDim, tok
 export function effectiveSel(s: UiState, view: ViewKey): SectionSel {
   const o = s.overrides[view] ?? {};
   return {
-    condition: o.condition ?? s.filter.condition,
-    rep: o.rep ?? s.filter.rep,
-    agent: o.agent ?? s.filter.agent,
+    condition: o.condition?.length ? o.condition : s.filter.condition,
+    rep: o.rep?.length ? o.rep : s.filter.rep,
+    agent: o.agent?.length ? o.agent : s.filter.agent,
   };
 }
 export function effectiveTask(s: UiState, view: ViewKey): string[] {
-  return s.overrides[view]?.task ?? s.filter.task;
+  const o = s.overrides[view]?.task;
+  return o?.length ? o : s.filter.task;
 }
