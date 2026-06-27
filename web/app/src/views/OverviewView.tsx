@@ -3,7 +3,7 @@ import { Card, Elevation } from '@blueprintjs/core';
 import { useData } from '../data/DataContext';
 import { useFilter, useReport, useTheme } from '../state/AppStateProvider';
 import { computeKpis } from '../data/kpis';
-import { scopeRuns } from '../data/filters';
+import { inVariantRuns, scopeRuns } from '../data/filters';
 import { conditionColor } from '../theme';
 import { EChart } from '../components/EChart';
 import { matrixData } from '../charts/matrix';
@@ -18,7 +18,10 @@ export function OverviewView() {
   const runs = data?.runs ?? [];
   const sel = effective('overview');
   const selTask = effectiveTask('overview');
-  const scoped = useMemo(() => scopeRuns(runs, selTask, sel), [runs, selTask, sel]);
+  const scoped = useMemo(
+    () => (variant ? scopeRuns(inVariantRuns(runs, variant), selTask, sel) : []),
+    [runs, variant, selTask, sel],
+  );
   if (!variant || !data) return null;
 
   const k = computeKpis(scoped);
