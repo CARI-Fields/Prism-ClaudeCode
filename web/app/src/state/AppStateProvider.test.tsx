@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
-import { AppStateProvider, useTheme, useView } from './AppStateProvider';
+import { AppStateProvider, useTheme, useView, useFilter } from './AppStateProvider';
 import type { Manifest } from '../types';
 
 const manifest: Manifest = { variants: [{ key: 'r1', eyebrow: '', title: 'R1', lede: '', conditions: ['goal'], tasks: ['coding'] }],
@@ -12,6 +12,15 @@ function Probe() {
   return (<div>
     <span>mode:{mode}</span><span>view:{view}</span>
     <button onClick={toggle}>t</button><button onClick={() => setView('s2')}>v</button>
+  </div>);
+}
+
+function FilterProbe() {
+  const { effective, setOverrideSingle } = useFilter();
+  const cond = effective('s3').condition;
+  return (<div>
+    <span>s3cond:{cond.join(',')}</span>
+    <button onClick={() => setOverrideSingle('s3', 'condition', 'goal')}>pin-goal</button>
   </div>);
 }
 
@@ -35,5 +44,15 @@ describe('AppStateProvider', () => {
     render(<AppStateProvider manifest={manifest}><Probe /></AppStateProvider>);
     expect(screen.getByText('mode:dark')).toBeInTheDocument();
     expect(screen.getByText('view:s2')).toBeInTheDocument();
+  });
+  it('hydrates §3 Feature override from s3cond in URL hash', () => {
+    window.location.hash = '#report=r1&s3cond=goal';
+    render(<AppStateProvider manifest={manifest}><FilterProbe /></AppStateProvider>);
+    expect(screen.getByText('s3cond:goal')).toBeInTheDocument();
+  });
+  it('write-through: §3 Feature override updates URL hash', () => {
+    render(<AppStateProvider manifest={manifest}><FilterProbe /></AppStateProvider>);
+    act(() => screen.getByText('pin-goal').click());
+    expect(window.location.hash).toContain('s3cond=goal');
   });
 });

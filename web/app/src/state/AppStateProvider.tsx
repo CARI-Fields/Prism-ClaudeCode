@@ -18,7 +18,7 @@ function bootstrap(manifest: Manifest): UiState {
   const url = parseHash(window.location.hash);
   const report = url.report && manifest.variants.some((v) => v.key === url.report) ? url.report : manifest.variants[0]?.key ?? '';
   const s = R.initUiState(report, initialTheme(url.theme), url.view ?? 'overview', url.filter);
-  return s;
+  return url.s3Condition.length ? { ...s, overrides: { s3: { condition: url.s3Condition } } } : s;
 }
 
 interface Ctx { state: UiState; setState: React.Dispatch<React.SetStateAction<UiState>>; }
@@ -29,10 +29,10 @@ export function AppStateProvider({ manifest, children }: { manifest: Manifest; c
   const [state, setState] = useState<UiState>(() => bootstrap(manifest));
 
   useEffect(() => {
-    const next = toHash({ report: state.report, theme: state.theme, view: state.view, filter: state.filter });
+    const next = toHash({ report: state.report, theme: state.theme, view: state.view, filter: state.filter, s3Condition: state.overrides.s3?.condition ?? [] });
     if (next !== window.location.hash) window.history.replaceState(null, '', next || window.location.pathname);
     localStorage.setItem(THEME_KEY, state.theme);
-  }, [state.report, state.theme, state.view, state.filter]);
+  }, [state.report, state.theme, state.view, state.filter, state.overrides]);
 
   const value = useMemo(() => ({ state, setState }), [state]);
   return <StateCtx.Provider value={value}><div className={`app-root${state.theme === 'dark' ? ' bp5-dark' : ''}`}>{children}</div></StateCtx.Provider>;
