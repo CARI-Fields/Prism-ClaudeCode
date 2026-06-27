@@ -11,7 +11,12 @@ export function contextOption(
   barMaxWidth?: number,
   barCategoryGap: string = '20%',
 ): EChartsOption {
-  const barSeries = bd.buckets.map((b) => ({
+  // Stack so the "head" of the context window (the stable prefix — system prompt,
+  // tools …) reads at the TOP of each bar and the last-appended context (messages /
+  // conversation) at the bottom. ECharts draws the first stacked series at the
+  // bottom, so iterate buckets tail→head. bd.buckets stays head→tail for the legend.
+  const stackBuckets = [...bd.buckets].reverse();
+  const barSeries = stackBuckets.map((b) => ({
     name: b,
     type: 'bar' as const,
     stack: 'context',

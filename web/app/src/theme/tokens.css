@@ -126,6 +126,38 @@ body {
 .app-topbar .bp5-tab-indicator,
 .view-nav .bp5-tab-indicator { background-color: var(--app-accent); height: 2px; }
 
+/* Report switch: a centered, emphasized segmented control in the top bar. */
+.topbar-variants {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 52px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+.topbar-variants .bp5-tab-list {
+  gap: 4px;
+  background: var(--app-panel-2);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  padding: 3px;
+}
+.topbar-variants .bp5-tab {
+  font-size: 12.5px;
+  padding: 5px 16px;
+  border-radius: var(--app-radius-sm);
+  transition: background-color .12s ease, color .12s ease;
+}
+.topbar-variants .bp5-tab:hover { color: var(--app-ink); }
+.topbar-variants .bp5-tab[aria-selected="true"] {
+  color: var(--app-accent-2);
+  font-weight: 600;
+  background: var(--app-accent-soft);
+}
+.topbar-variants .bp5-tab-indicator { display: none; }
+
 /* View nav: make the active section read as a clear, prominent selection. */
 .view-nav.bp5-tabs .bp5-tab {
   font-size: 13px;

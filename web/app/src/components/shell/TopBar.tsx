@@ -12,12 +12,14 @@ export function TopBar({ manifest }: { manifest: Manifest }) {
     <Navbar className="app-topbar">
       <Navbar.Group align={Alignment.LEFT}>
         <Navbar.Heading>CC Orchestration Report</Navbar.Heading>
-        {manifest.variants.length > 1 && (
+      </Navbar.Group>
+      {manifest.variants.length > 1 && (
+        <div className="topbar-variants" role="group" aria-label="Report">
           <Tabs id="variant" selectedTabId={report} onChange={(id) => setReport(String(id))} animate>
             {manifest.variants.map((v) => <Tab key={v.key} id={v.key} title={v.title} />)}
           </Tabs>
-        )}
-      </Navbar.Group>
+        </div>
+      )}
       <Navbar.Group align={Alignment.RIGHT}>
         <ExportControl />
         <Navbar.Divider />
