@@ -47,3 +47,5 @@ body { margin: 0; background: var(--app-bg); color: var(--app-ink); font-family:
 .status-key { display: flex; flex-wrap: wrap; gap: 7px 14px; margin-top: 10px; font-family: var(--app-mono); font-size: 11px; color: var(--app-muted); }
 .status-key .status-swatch span:first-child { display: inline-flex; width: 16px; height: 16px; align-items: center; justify-content: center; border-radius: 3px; margin-right: 5px; }
 @media (max-width: 880px) { .view-grid { grid-template-columns: 1fr; } }
+
+.view-stack { display: grid; gap: 16px; } .cache-sub { font-family: var(--app-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--app-muted); margin: 8px 0 2px; } .chart { width: 100%; height: 340px; } .chart.short { height: 290px; } .chart.tall { height: 440px; }
