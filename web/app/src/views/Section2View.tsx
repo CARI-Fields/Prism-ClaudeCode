@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card, Elevation } from '@blueprintjs/core';
 import { useData } from '../data/DataContext';
 import { useFilter, useReport, useTheme } from '../state/AppStateProvider';
-import { scopeTurns } from '../data/filters';
+import { inVariantTurns, scopeTurns } from '../data/filters';
 import { EChart } from '../components/EChart';
 import { cacheByAgent } from '../charts/cacheTimeline';
 import { cacheOption, latencyOption } from '../charts/section2Options';
@@ -15,7 +15,10 @@ export function Section2View() {
   const variant = data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
   const sel = effective('s2');
   const selTask = effectiveTask('s2');
-  const turns = useMemo(() => scopeTurns(data?.turns ?? [], selTask, sel), [data, selTask, sel]);
+  const turns = useMemo(
+    () => (variant ? scopeTurns(inVariantTurns(data?.turns ?? [], variant), selTask, sel) : []),
+    [data, variant, selTask, sel],
+  );
   if (!variant) return null;
   const conds = sel.condition.length ? sel.condition : variant.conditions;
   const tasks = selTask.length ? selTask : variant.tasks;

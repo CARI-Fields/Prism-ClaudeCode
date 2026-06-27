@@ -3,21 +3,12 @@ import type { ReactNode } from 'react';
 import type { FilterDim, Manifest, ThemeMode, UiState, ViewKey } from '../types';
 import * as R from './uiState';
 import { parseHash, toHash } from './urlState';
-
-const THEME_KEY = 'cc_report_theme';
-
-function initialTheme(urlTheme: ThemeMode | null): ThemeMode {
-  if (urlTheme) return urlTheme;
-  const stored = localStorage.getItem(THEME_KEY);
-  if (stored === 'light' || stored === 'dark') return stored;
-  // Double optional chain: guard against jsdom (no matchMedia) AND undefined result
-  return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light';
-}
+import { THEME_KEY, resolveThemeMode } from './themeMode';
 
 function bootstrap(manifest: Manifest): UiState {
   const url = parseHash(window.location.hash);
   const report = url.report && manifest.variants.some((v) => v.key === url.report) ? url.report : manifest.variants[0]?.key ?? '';
-  const s = R.initUiState(report, initialTheme(url.theme), url.view ?? 'overview', url.filter);
+  const s = R.initUiState(report, resolveThemeMode(url.theme), url.view ?? 'overview', url.filter);
   return url.s3Condition.length ? { ...s, overrides: { s3: { condition: url.s3Condition } } } : s;
 }
 

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Card, Elevation, HTMLSelect } from '@blueprintjs/core';
 import { useData } from '../data/DataContext';
 import { useFilter, useReport, useTheme } from '../state/AppStateProvider';
-import { scopeRuns } from '../data/filters';
+import { inVariantRuns, scopeRuns } from '../data/filters';
 import { EChart } from '../components/EChart';
 import { matrixOption, conditionOption, overheadOption, efficiencyOption } from '../charts/section1Options';
 import { conditionMetrics, conditionOverheads } from '../charts/conditionMetrics';
@@ -35,7 +35,10 @@ export function Section1View() {
   const variant = data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
   const sel = effective('s1');
   const selTask = effectiveTask('s1');
-  const scopedRuns = useMemo(() => scopeRuns(data?.runs ?? [], selTask, sel), [data, selTask, sel]);
+  const scopedRuns = useMemo(
+    () => (variant ? scopeRuns(inVariantRuns(data?.runs ?? [], variant), selTask, sel) : []),
+    [data, variant, selTask, sel],
+  );
   if (!variant) return null;
 
   const hasBaseline = variant.conditions.includes('single_agent');

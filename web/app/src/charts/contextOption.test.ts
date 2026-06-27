@@ -23,4 +23,12 @@ describe('contextOption', () => {
     expect(hit.yAxisIndex).toBe(1);
     expect(withHit.yAxis[1].inverse).toBe(true);
   });
+
+  it('propagates bar density (width + category gap) to every bar series', () => {
+    const bd = breakdownData(COMPOSE_MODES.token, rows, []);
+    const opt = contextOption(bd, o, false, [], 42, '12%') as any;
+    const bars = opt.series.filter((s: any) => s.type === 'bar');
+    expect(bars.length).toBeGreaterThan(0);
+    expect(bars.every((s: any) => s.barMaxWidth === 42 && s.barCategoryGap === '12%')).toBe(true);
+  });
 });

@@ -8,6 +8,8 @@ export function contextOption(
   o: Ordered,
   showHit: boolean,
   hitData: (number | null)[],
+  barMaxWidth?: number,
+  barCategoryGap: string = '20%',
 ): EChartsOption {
   const barSeries = bd.buckets.map((b) => ({
     name: b,
@@ -15,6 +17,8 @@ export function contextOption(
     stack: 'context',
     xAxisIndex: 0,
     yAxisIndex: 0,
+    barMaxWidth,
+    barCategoryGap,
     data: o.indexes.map((pos) => bd.byKey.get(`${pos}:${b}`) ?? 0),
     itemStyle: { color: bd.colors[b] ?? '#868e96' },
   }));

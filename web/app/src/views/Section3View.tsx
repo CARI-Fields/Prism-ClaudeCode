@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, Checkbox, Elevation, HTMLSelect, Slider } from '@blueprintjs/core';
 import { useData } from '../data/DataContext';
 import { useFilter, useReport, useTheme } from '../state/AppStateProvider';
-import { scopeRuns, scopeTurns } from '../data/filters';
+import { inVariantRuns, inVariantTurns, scopeRuns, scopeTurns } from '../data/filters';
 import { taskLabel } from '../data/taskLabel';
 import { EChart } from '../components/EChart';
 import { orderedRequests } from '../charts/ordered';
@@ -28,8 +28,8 @@ export function Section3View() {
 
   const s3 = effective('s3');
   const s3Task = effectiveTask('s3');
-  const runs = scopeRuns(data.runs, s3Task, s3);
-  const turns = scopeTurns(data.turns, s3Task, s3);
+  const runs = scopeRuns(inVariantRuns(data.runs, variant), s3Task, s3);
+  const turns = scopeTurns(inVariantTurns(data.turns, variant), s3Task, s3);
   const singleAgent = s3.agent.length === 1 ? s3.agent[0] : 'all';
   const mdef = COMPOSE_MODES[compose as 'context' | 'source' | 'token'] ?? COMPOSE_MODES.context;
 
@@ -101,7 +101,7 @@ export function Section3View() {
             <EChart
               className="chart tall"
               themeMode={mode}
-              option={contextOption(bd, ordered, hitrate, hitData)}
+              option={contextOption(bd, ordered, hitrate, hitData, barMaxWidth, barCategoryGap)}
               onClick={
                 mdef.clickable
                   ? (p) => {
