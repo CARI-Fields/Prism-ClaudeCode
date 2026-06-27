@@ -19,4 +19,8 @@ describe('fetchExport', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
     await expect(fetchExport(['r1'], false)).rejects.toMatchObject({ status: 500 });
   });
+  it('throws ApiError(401) on unauthorized', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+    await expect(fetchExport(['r1'], false)).rejects.toMatchObject({ status: 401 });
+  });
 });

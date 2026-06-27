@@ -9,14 +9,18 @@ describe('useExportDownload', () => {
   it('downloads a blob: fetch → object URL → anchor click, toggling busy', async () => {
     const blob = new Blob(['zip']);
     vi.spyOn(client, 'fetchExport').mockResolvedValue(blob);
-    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() });
+    const revoke = vi.fn();
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: revoke });
     const click = vi.fn();
+    let anchor: HTMLAnchorElement | undefined;
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation((tag: string) =>
-      tag === 'a'
-        ? ({ href: '', download: '', click, remove: vi.fn() } as unknown as HTMLAnchorElement)
-        : origCreate(tag),
-    );
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'a') {
+        anchor = { href: '', download: '', click, remove: vi.fn() } as unknown as HTMLAnchorElement;
+        return anchor;
+      }
+      return origCreate(tag);
+    });
     vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
 
     const { result } = renderHook(() => useExportDownload());
@@ -24,6 +28,8 @@ describe('useExportDownload', () => {
 
     expect(client.fetchExport).toHaveBeenCalledWith(['r1'], false);
     expect(click).toHaveBeenCalled();
+    expect(anchor?.download).toBe('cc-traces.zip');
+    expect(revoke).toHaveBeenCalledWith('blob:x');
     expect(result.current.busy).toBe(false);
     expect(result.current.error).toBeNull();
   });
