@@ -41,3 +41,9 @@ body { margin: 0; background: var(--app-bg); color: var(--app-ink); font-family:
 .panel-card { min-width: 0; } .panel-title { font-size: 14.5px; font-weight: 600; margin: 0 0 8px; }
 .strategy-legend { list-style: none; padding: 0; margin: 10px 0 0; } .strategy-legend li { margin: 6px 0; color: var(--app-muted); }
 @media (max-width: 880px) { .kpi-row { grid-template-columns: repeat(2,1fr); } .overview-grid { grid-template-columns: 1fr; } }
+
+.view-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.status-key { display: flex; flex-wrap: wrap; gap: 7px 14px; margin-top: 10px; font-family: var(--app-mono); font-size: 11px; color: var(--app-muted); }
+.status-key .status-swatch span:first-child { display: inline-flex; width: 16px; height: 16px; align-items: center; justify-content: center; border-radius: 3px; margin-right: 5px; }
+@media (max-width: 880px) { .view-grid { grid-template-columns: 1fr; } }
