@@ -14,10 +14,11 @@ export function Section2View() {
   const { mode } = useTheme();
   const variant = data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
   const sel = effective('s2');
-  const turns = useMemo(() => scopeTurns(data?.turns ?? [], effectiveTask('s2'), sel), [data, effectiveTask, sel]);
+  const selTask = effectiveTask('s2');
+  const turns = useMemo(() => scopeTurns(data?.turns ?? [], selTask, sel), [data, selTask, sel]);
   if (!variant) return null;
   const conds = sel.condition.length ? sel.condition : variant.conditions;
-  const tasks = effectiveTask('s2').length ? effectiveTask('s2') : variant.tasks;
+  const tasks = selTask.length ? selTask : variant.tasks;
   const singleAgent = sel.agent.length === 1 ? sel.agent[0] : 'all';
   return (
     <div className="view view-stack">

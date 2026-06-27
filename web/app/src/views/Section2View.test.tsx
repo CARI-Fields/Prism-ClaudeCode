@@ -12,6 +12,6 @@ describe('Section2View', () => {
   it('renders the distribution panels', () => {
     render(<AppStateProvider manifest={manifest}><Section2View /></AppStateProvider>);
     expect(screen.getByText(/Prefix Cache Hit Rate/)).toBeInTheDocument();
-    expect(screen.getAllByTestId('chart').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByTestId('chart')).toHaveLength(2);
   });
 });
