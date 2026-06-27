@@ -8,6 +8,7 @@ import {
 } from './echartsTheme';
 import { fmt, fmtUsd, fmtMetric } from './format';
 import { conditionColor } from '../theme';
+import { taskLabel } from '../data/taskLabel';
 
 // ---------------------------------------------------------------------------
 // matrixOption — heatmap showing per-cell status codes
@@ -81,7 +82,7 @@ export function conditionOption(
   const series = tasks.map((task, ti) => {
     const rows = metrics.filter((r) => r.task === task);
     return {
-      name: task,
+      name: taskLabel(task),
       type: 'bar' as const,
       barMaxWidth: 46,
       data: conditions.map((c) => {
@@ -114,7 +115,7 @@ export function conditionOption(
       trigger: 'axis' as const,
       valueFormatter: (value: number | null) => fmtMetric(value, metric),
     },
-    legend: grouped ? bottomLegend(tasks) : { show: false },
+    legend: grouped ? bottomLegend(tasks.map(taskLabel)) : { show: false },
     grid: { left: 66, right: 20, top: 18, bottom: grouped ? 92 : 72 },
     xAxis: catAxis({ data: conditions, axisLabel: { ...axisLabelStyle(), rotate: 26 } }),
     yAxis: valueAxis(yName(metricLabel, 54)),
@@ -137,7 +138,7 @@ export function overheadOption(
   const series = tasks.map((task, ti) => {
     const rows = overheads.filter((r) => r.task === task);
     return {
-      name: task,
+      name: taskLabel(task),
       type: 'bar' as const,
       barMaxWidth: 46,
       data: conditions.map((c) => {
@@ -193,7 +194,7 @@ export function overheadOption(
           .join('<br>');
       },
     },
-    legend: grouped ? bottomLegend(tasks) : { show: false },
+    legend: grouped ? bottomLegend(tasks.map(taskLabel)) : { show: false },
     grid: { left: 62, right: 26, top: 18, bottom: grouped ? 92 : 72 },
     xAxis: catAxis({ data: conditions, axisLabel: { ...axisLabelStyle(), rotate: 26 } }),
     yAxis: valueAxis({ ...yName('× vs single_agent', 50), min: 0 }),
@@ -220,7 +221,7 @@ function qualityAxisLabel(task: string): string {
     : task.startsWith('research')
       ? 'mean rubric score'
       : 'mean quality score';
-  return `${prefix} · ${task}`;
+  return `${prefix} · ${taskLabel(task)}`;
 }
 
 export function efficiencyOption(
@@ -289,8 +290,10 @@ export function efficiencyOption(
     },
     legend: rightLegend(conditions),
     grid: { left: 64, right: 152, top: 16, bottom: 50 },
-    xAxis: valueAxis(xName('mean total cost ($)', 28)),
-    yAxis: valueAxis(yName(qualityAxisLabel(task), 56)),
+    // Positioning map: scale both axes to the data so the conditions spread out
+    // and relative cost/quality is legible, rather than crushed against a 0-origin.
+    xAxis: valueAxis({ ...xName('mean total cost ($)', 28), scale: true }),
+    yAxis: valueAxis({ ...yName(qualityAxisLabel(task), 56), scale: true }),
     series,
   } as unknown as EChartsOption;
 }

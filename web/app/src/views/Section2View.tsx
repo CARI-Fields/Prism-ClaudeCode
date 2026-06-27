@@ -3,6 +3,7 @@ import { Card, Elevation } from '@blueprintjs/core';
 import { useData } from '../data/DataContext';
 import { useFilter, useReport, useTheme } from '../state/AppStateProvider';
 import { inVariantTurns, scopeTurns } from '../data/filters';
+import { taskLabel } from '../data/taskLabel';
 import { EChart } from '../components/EChart';
 import { cacheByAgent } from '../charts/cacheTimeline';
 import { cacheOption, latencyOption } from '../charts/section2Options';
@@ -29,7 +30,7 @@ export function Section2View() {
         <h2 className="panel-title">Prefix Cache Hit Rate (accumulated)</h2>
         {tasks.map((task) => (
           <div key={task}>
-            <h3 className="cache-sub">{task}</h3>
+            <h3 className="cache-sub">{taskLabel(task)}</h3>
             <EChart className="chart short" themeMode={mode} option={cacheOption(cacheByAgent(turns.filter((t) => t.task === task)), conds, singleAgent)} />
           </div>
         ))}

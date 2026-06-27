@@ -328,6 +328,9 @@ body {
    Section views — grids, status key, sub-headings, charts
    ========================================================================== */
 .view-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+/* §1 holds an odd number of cards when the baseline (overhead) panel is present;
+   let the trailing card span both columns so the grid never leaves an empty cell. */
+.view-grid > .panel-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .view-stack { display: grid; gap: 16px; }
 
 .status-key {
