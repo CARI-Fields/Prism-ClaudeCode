@@ -51,8 +51,3 @@ export interface UiState {
   filter: GlobalFilter;
   overrides: Partial<Record<ViewKey, Partial<GlobalFilter>>>;
 }
-
-// @deprecated until T15 cutover
-export type Dimension = 'condition' | 'rep' | 'agent';
-export type ScopeKey = 's1' | 's2' | 's3';
-export interface AppState { report: string; task: string[]; s1: SectionSel; s2: SectionSel; s3: SectionSel; }
