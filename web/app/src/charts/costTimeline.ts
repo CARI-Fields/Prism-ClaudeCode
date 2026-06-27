@@ -6,7 +6,12 @@ import { groupedXAxis, type Ordered } from './ordered';
 
 const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 
-export function costTimelineOption(rows: Turn[], o: Ordered, barMaxWidth: number): EChartsOption {
+export function costTimelineOption(
+  rows: Turn[],
+  o: Ordered,
+  barMaxWidth: number,
+  barCategoryGap: string = '20%',
+): EChartsOption {
   const ordered = o.indexes.map(i => rows[i]);
 
   function barData(field: keyof Turn): number[] {
@@ -31,11 +36,11 @@ export function costTimelineOption(rows: Turn[], o: Ordered, barMaxWidth: number
       valueAxis({ ...yName('seconds', 46), splitLine: { show: false } }),
     ] as EChartsOption['yAxis'],
     series: [
-      { name: 'input',          type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, data: barData('input_tokens'),       itemStyle: { color: '#3b5bdb' } },
-      { name: 'cache read',     type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, data: barData('cache_read'),          itemStyle: { color: '#0c8599' } },
-      { name: 'cache write 5m', type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, data: barData('cache_creation_5m'),  itemStyle: { color: '#e8590c' } },
-      { name: 'cache write 1h', type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, data: barData('cache_creation_1h'),  itemStyle: { color: '#f59f00' } },
-      { name: 'output',         type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, data: barData('output_tokens'),      itemStyle: { color: '#7048e8' } },
+      { name: 'input',          type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('input_tokens'),       itemStyle: { color: '#3b5bdb' } },
+      { name: 'cache read',     type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('cache_read'),          itemStyle: { color: '#0c8599' } },
+      { name: 'cache write 5m', type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('cache_creation_5m'),  itemStyle: { color: '#e8590c' } },
+      { name: 'cache write 1h', type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('cache_creation_1h'),  itemStyle: { color: '#f59f00' } },
+      { name: 'output',         type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('output_tokens'),      itemStyle: { color: '#7048e8' } },
       {
         name: 'TTFT', type: 'line', xAxisIndex: 0, yAxisIndex: 1,
         data: lineData('ttft_s'),

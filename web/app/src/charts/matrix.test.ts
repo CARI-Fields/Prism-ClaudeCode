@@ -22,4 +22,11 @@ describe('matrixData', () => {
     expect(cells[0].status).toBe('missing');
     expect(cells[0].status_code).toBe(0);
   });
+  it('labels long-horizon rows by their bare domain (cell.row matches the axis row)', () => {
+    const lh = [{ run_id: 'c1', task: 'coding_longhorizon', condition: 'goal', rep: 1, success: true }] as unknown as Run[];
+    const { rows, cells } = matrixData(lh, ['coding_longhorizon'], [1], ['goal']);
+    expect(rows).toEqual(['coding r1']);          // axis label is the bare domain…
+    expect(cells[0].row).toBe('coding r1');         // …and the cell joins on the same label
+    expect(cells[0].task).toBe('coding_longhorizon'); // raw key preserved for data ops
+  });
 });

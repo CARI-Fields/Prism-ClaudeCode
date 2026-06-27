@@ -119,11 +119,24 @@ body {
   color: var(--app-muted);
 }
 .app-topbar .bp5-tab { font-size: 12px; }
-.view-nav.bp5-tabs .bp5-tab { font-size: 12.5px; }
-.app-topbar .bp5-tab[aria-selected="true"],
-.view-nav .bp5-tab[aria-selected="true"] { color: var(--app-ink); }
+.app-topbar .bp5-tab[aria-selected="true"] { color: var(--app-ink); }
 .app-topbar .bp5-tab-indicator,
 .view-nav .bp5-tab-indicator { background-color: var(--app-accent); height: 2px; }
+
+/* View nav: make the active section read as a clear, prominent selection. */
+.view-nav.bp5-tabs .bp5-tab {
+  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: var(--app-radius-sm);
+  transition: background-color .12s ease, color .12s ease;
+}
+.view-nav.bp5-tabs .bp5-tab:hover { color: var(--app-ink); background: var(--app-accent-soft); }
+.view-nav.bp5-tabs .bp5-tab[aria-selected="true"] {
+  color: var(--app-accent-2);
+  font-weight: 600;
+  background: var(--app-accent-soft);
+}
+.view-nav.bp5-tabs .bp5-tab-indicator { height: 3px; }
 .view-nav.bp5-tabs {
   margin-bottom: 18px;
   border-bottom: 1px solid var(--app-line);
@@ -314,6 +327,10 @@ body {
   text-transform: uppercase; color: var(--app-muted);
 }
 .s3-controls .bp5-slider { width: 130px; min-width: 130px; }
+/* The cache-hit checkbox is a Blueprint control whose absolute indicator + bottom
+   margin throw it off the row's baseline — pull it inline with the other controls. */
+.s3-controls .bp5-checkbox.bp5-control { margin: 0; padding-left: 0; min-height: 0; }
+.s3-controls .bp5-checkbox .bp5-control-indicator { position: static; margin: 0; }
 .run-tag { font-family: var(--app-mono); font-size: 11px; letter-spacing: .02em; color: var(--app-muted); }
 
 /* ============================================================================
