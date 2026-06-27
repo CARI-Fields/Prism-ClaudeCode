@@ -10,10 +10,12 @@ const runs: Run[] = [{ run_id: 'a', task: 'coding', condition: 'goal', rep: 1, s
 vi.mock('../data/DataContext', () => ({ useData: () => ({ data: { manifest, runs, turns: [], components: [] } }) }));
 
 describe('Section1View', () => {
-  it('renders the matrix and comparison panels with a baseline overhead panel', () => {
+  it('renders comparison + overhead + efficiency panels, with no Experiment matrix (that lives in Overview)', () => {
     render(<AppStateProvider manifest={manifest}><Section1View /></AppStateProvider>);
-    expect(screen.getByText('Experiment matrix')).toBeInTheDocument();
+    expect(screen.queryByText('Experiment matrix')).not.toBeInTheDocument();
+    expect(screen.getByText('Condition comparison')).toBeInTheDocument();
     expect(screen.getByText('Overhead vs single agent')).toBeInTheDocument();
-    expect(screen.getAllByTestId('chart').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText('Quality vs cost map')).toBeInTheDocument();
+    expect(screen.getAllByTestId('chart').length).toBe(3);
   });
 });

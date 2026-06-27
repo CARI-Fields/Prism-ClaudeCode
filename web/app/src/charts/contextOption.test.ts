@@ -31,4 +31,13 @@ describe('contextOption', () => {
     expect(bars.length).toBeGreaterThan(0);
     expect(bars.every((s: any) => s.barMaxWidth === 42 && s.barCategoryGap === '12%')).toBe(true);
   });
+
+  it('stacks the context head on top: head bucket is the last bar series, tail is the first', () => {
+    const bd = breakdownData(COMPOSE_MODES.token, rows, []);
+    const bars = (contextOption(bd, o, false, []) as any).series.filter((s: any) => s.type === 'bar');
+    // bd.buckets is head→tail; ECharts draws the first series at the bottom, so the
+    // head bucket must render last (top) and the tail bucket first (bottom).
+    expect(bars[bars.length - 1].name).toBe(bd.buckets[0]);
+    expect(bars[0].name).toBe(bd.buckets[bd.buckets.length - 1]);
+  });
 });
