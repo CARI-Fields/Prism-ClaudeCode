@@ -17,6 +17,12 @@ describe('computeKpis', () => {
     expect(k.meanCacheHit).toBeCloseTo(0.8);
   });
   it('returns nulls for empty input', () => {
-    expect(computeKpis([])).toEqual({ runs: 0, meanRequests: null, meanCost: null, meanQuality: null, meanCacheHit: null });
+    expect(computeKpis([])).toEqual({
+      runs: 0,
+      meanRequests: null,
+      meanCost: null,
+      meanQuality: null,
+      meanCacheHit: null,
+    });
   });
 });

@@ -23,7 +23,8 @@ export function Section3View() {
   const [hitrate, setHitrate] = useState(true);
   const [density, setDensity] = useState(100);
   const [sel, setSel] = useState<Record<string, CtxSelection | null>>({});
-  const variant = data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
+  const variant =
+    data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
   if (!variant || !data) return null;
 
   const s3 = effective('s3');
@@ -36,11 +37,20 @@ export function Section3View() {
   return (
     <div className="view view-stack">
       <Card elevation={Elevation.ZERO} className="panel-card">
-        <div className="rail-head"><span className="rail-name">Display</span></div>
+        <div className="rail-head">
+          <span className="rail-name">Display</span>
+        </div>
         <div className="s3-controls">
           <label>
             bar density
-            <Slider min={0} max={100} stepSize={1} labelRenderer={false} value={density} onChange={setDensity} />
+            <Slider
+              min={0}
+              max={100}
+              stepSize={1}
+              labelRenderer={false}
+              value={density}
+              onChange={setDensity}
+            />
           </label>
           <label>
             compose by
@@ -57,7 +67,11 @@ export function Section3View() {
               <option value="none">none</option>
             </HTMLSelect>
           </label>
-          <Checkbox checked={hitrate} onChange={(e) => setHitrate(e.currentTarget.checked)} label="cache hit rate" />
+          <Checkbox
+            checked={hitrate}
+            onChange={(e) => setHitrate(e.currentTarget.checked)}
+            label="cache hit rate"
+          />
         </div>
       </Card>
       {runs.map((run) => {
@@ -65,14 +79,14 @@ export function Section3View() {
           .filter((t) => t.run_id === run.run_id)
           .sort((a, b) => a.request_index - b.request_index);
         const typeByIndex = new Map<number, string>(
-          rowsForRun.map((t, i) => [i, t.request_type ?? 'main-agent'])
+          rowsForRun.map((t, i) => [i, t.request_type ?? 'main-agent']),
         );
         const ordered = orderedRequests(
           typeByIndex,
           rowsForRun.map((_, i) => i),
           singleAgent,
           group,
-          AGENT_TYPE_ORDER
+          AGENT_TYPE_ORDER,
         );
         const barMaxWidth = Math.max(6, Math.round(6 + 74 * (density / 100)));
         // Denser bars pack tighter: gap shrinks as the bars widen (and vice-versa).
@@ -80,7 +94,7 @@ export function Section3View() {
         const bd = breakdownData(
           mdef,
           rowsForRun,
-          data.components.filter((c) => c.run_id === run.run_id)
+          data.components.filter((c) => c.run_id === run.run_id),
         );
         const hitData = hitrate ? hitRateData(rowsForRun, ordered) : [];
         return (

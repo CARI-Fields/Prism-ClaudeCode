@@ -5,8 +5,28 @@ import { conditionOption, efficiencyOption, matrixOption, overheadOption } from 
 import type { Run } from '../types';
 
 const runs = [
-  { run_id: 'a', task: 'coding', condition: 'single_agent', rep: 1, success: true, num_requests: 4, total_cost_usd: 0.1, quality_score: 2, speedup: 1.5 },
-  { run_id: 'b', task: 'coding', condition: 'subagents', rep: 1, success: true, num_requests: 8, total_cost_usd: 0.5, quality_score: 3, speedup: 2.0 },
+  {
+    run_id: 'a',
+    task: 'coding',
+    condition: 'single_agent',
+    rep: 1,
+    success: true,
+    num_requests: 4,
+    total_cost_usd: 0.1,
+    quality_score: 2,
+    speedup: 1.5,
+  },
+  {
+    run_id: 'b',
+    task: 'coding',
+    condition: 'subagents',
+    rep: 1,
+    success: true,
+    num_requests: 8,
+    total_cost_usd: 0.5,
+    quality_score: 3,
+    speedup: 2.0,
+  },
 ] as unknown as Run[];
 const conds = ['single_agent', 'subagents'];
 

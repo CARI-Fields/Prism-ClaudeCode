@@ -7,7 +7,9 @@ describe('fetchExport', () => {
   it('requests the export URL with auth + texts flag and returns a Blob', async () => {
     localStorage.setItem('cc_report_token', 'tok');
     const blob = new Blob(['zip']);
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, blob: () => Promise.resolve(blob) });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, blob: () => Promise.resolve(blob) });
     vi.stubGlobal('fetch', fetchMock);
     const out = await fetchExport(['r1', 'r2'], true);
     expect(out).toBe(blob);

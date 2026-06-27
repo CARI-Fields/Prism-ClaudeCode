@@ -25,7 +25,9 @@ vi.mock('../charts/echartsCore', () => ({
         setOption: vi.fn(),
         resize: vi.fn(),
         dispose: vi.fn(),
-        on: (event, cb) => { if (event === 'click') chart.clickHandler = cb; },
+        on: (event, cb) => {
+          if (event === 'click') chart.clickHandler = cb;
+        },
         off: vi.fn(),
       };
       charts.push(chart);
@@ -35,7 +37,11 @@ vi.mock('../charts/echartsCore', () => ({
   },
 }));
 
-afterEach(() => { cleanup(); init.mockClear(); charts.length = 0; });
+afterEach(() => {
+  cleanup();
+  init.mockClear();
+  charts.length = 0;
+});
 
 describe('EChart theming', () => {
   it('initializes under the report theme for the active mode', () => {

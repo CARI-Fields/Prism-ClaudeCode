@@ -15,8 +15,15 @@ export function TopBar({ manifest }: { manifest: Manifest }) {
       </Navbar.Group>
       {manifest.variants.length > 1 && (
         <div className="topbar-variants" role="group" aria-label="Report">
-          <Tabs id="variant" selectedTabId={report} onChange={(id) => setReport(String(id))} animate>
-            {manifest.variants.map((v) => <Tab key={v.key} id={v.key} title={v.title} />)}
+          <Tabs
+            id="variant"
+            selectedTabId={report}
+            onChange={(id) => setReport(String(id))}
+            animate
+          >
+            {manifest.variants.map((v) => (
+              <Tab key={v.key} id={v.key} title={v.title} />
+            ))}
           </Tabs>
         </div>
       )}

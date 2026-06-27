@@ -3,8 +3,30 @@ import type { Turn } from '../types';
 import { cacheByAgent, promptTokens } from './cacheTimeline';
 
 const turns = [
-  { run_id: 'a', task: 'coding', condition: 'single_agent', rep: 1, request_type: 'main-agent', request_index: 0, input_tokens: 100, cache_read: 0, cache_creation_5m: 100, cache_creation_1h: 0 },
-  { run_id: 'a', task: 'coding', condition: 'single_agent', rep: 1, request_type: 'main-agent', request_index: 1, input_tokens: 0, cache_read: 200, cache_creation_5m: 0, cache_creation_1h: 0 },
+  {
+    run_id: 'a',
+    task: 'coding',
+    condition: 'single_agent',
+    rep: 1,
+    request_type: 'main-agent',
+    request_index: 0,
+    input_tokens: 100,
+    cache_read: 0,
+    cache_creation_5m: 100,
+    cache_creation_1h: 0,
+  },
+  {
+    run_id: 'a',
+    task: 'coding',
+    condition: 'single_agent',
+    rep: 1,
+    request_type: 'main-agent',
+    request_index: 1,
+    input_tokens: 0,
+    cache_read: 200,
+    cache_creation_5m: 0,
+    cache_creation_1h: 0,
+  },
 ] as unknown as Turn[];
 
 describe('cacheByAgent', () => {
@@ -19,14 +41,26 @@ describe('cacheByAgent', () => {
     expect(rows[1].cum_context_tokens).toBe(400);
   });
   it('separates streams by (run, request_type)', () => {
-    const mixed = [...turns, { ...turns[0], request_type: 'task-subagent', request_index: 0 }] as Turn[];
+    const mixed = [
+      ...turns,
+      { ...turns[0], request_type: 'task-subagent', request_index: 0 },
+    ] as Turn[];
     const rows = cacheByAgent(mixed);
-    expect(new Set(rows.map((r) => r.request_type))).toEqual(new Set(['main-agent', 'task-subagent']));
+    expect(new Set(rows.map((r) => r.request_type))).toEqual(
+      new Set(['main-agent', 'task-subagent']),
+    );
   });
 });
 
 describe('promptTokens', () => {
   it('sums input + cache_read + both cache_creation buckets', () => {
-    expect(promptTokens({ input_tokens: 10, cache_read: 20, cache_creation_5m: 5, cache_creation_1h: 3 } as unknown as Turn)).toBe(38);
+    expect(
+      promptTokens({
+        input_tokens: 10,
+        cache_read: 20,
+        cache_creation_5m: 5,
+        cache_creation_1h: 3,
+      } as unknown as Turn),
+    ).toBe(38);
   });
 });

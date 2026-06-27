@@ -22,26 +22,62 @@ const CONTEXT_BUCKET: Record<string, string> = {
   'skills listing': 'Skills',
 };
 const SOURCE_ORDER = [
-  'base system prompt', 'builtin tool definitions', 'MCP / extension tool definitions',
-  'custom agent definitions', 'CLAUDE.md / project instructions', 'skills listing',
-  'invoked skill bodies', 'auto memory', 'hooks / system reminders', 'user input',
-  'assistant / conversation history', 'tool results / file reads', 'subagent summaries', 'uncategorized context',
+  'base system prompt',
+  'builtin tool definitions',
+  'MCP / extension tool definitions',
+  'custom agent definitions',
+  'CLAUDE.md / project instructions',
+  'skills listing',
+  'invoked skill bodies',
+  'auto memory',
+  'hooks / system reminders',
+  'user input',
+  'assistant / conversation history',
+  'tool results / file reads',
+  'subagent summaries',
+  'uncategorized context',
 ];
 const TOKEN_BUCKET: Record<string, string> = {
-  'input tokens': 'input', 'prefix cache read': 'cache read',
-  'prefix cache write 5m': 'cache write', 'prefix cache write 1h': 'cache write',
+  'input tokens': 'input',
+  'prefix cache read': 'cache read',
+  'prefix cache write 5m': 'cache write',
+  'prefix cache write 1h': 'cache write',
 };
 
 export const COMPOSE_MODES: Record<'context' | 'source' | 'token', ComposeMode> = {
   context: {
-    key: 'context', bucketOf: (c) => CONTEXT_BUCKET[c] ?? 'Messages',
-    order: ['System prompt', 'System tools', 'MCP tools', 'Custom agents', 'Memory files', 'Skills', 'Messages'],
-    colors: { 'System prompt': '#3b5bdb', 'System tools': '#0c8599', 'MCP tools': '#15aabf', 'Custom agents': '#f76707', 'Memory files': '#2f9e44', Skills: '#7048e8', Messages: '#495057' },
+    key: 'context',
+    bucketOf: (c) => CONTEXT_BUCKET[c] ?? 'Messages',
+    order: [
+      'System prompt',
+      'System tools',
+      'MCP tools',
+      'Custom agents',
+      'Memory files',
+      'Skills',
+      'Messages',
+    ],
+    colors: {
+      'System prompt': '#3b5bdb',
+      'System tools': '#0c8599',
+      'MCP tools': '#15aabf',
+      'Custom agents': '#f76707',
+      'Memory files': '#2f9e44',
+      Skills: '#7048e8',
+      Messages: '#495057',
+    },
     clickable: false,
   },
-  source: { key: 'source', bucketOf: (c) => c, order: SOURCE_ORDER, colors: SOURCE_COLORS, clickable: true },
+  source: {
+    key: 'source',
+    bucketOf: (c) => c,
+    order: SOURCE_ORDER,
+    colors: SOURCE_COLORS,
+    clickable: true,
+  },
   token: {
-    key: 'token', bucketOf: (c) => TOKEN_BUCKET[c] ?? null,
+    key: 'token',
+    bucketOf: (c) => TOKEN_BUCKET[c] ?? null,
     order: ['input', 'cache read', 'cache write'],
     colors: { input: '#3b5bdb', 'cache read': '#0c8599', 'cache write': '#e8590c' },
     clickable: false,
@@ -49,10 +85,17 @@ export const COMPOSE_MODES: Record<'context' | 'source' | 'token', ComposeMode> 
 };
 
 export interface Breakdown {
-  buckets: string[]; byKey: Map<string, number>; colors: Record<string, string>; clickable: boolean;
+  buckets: string[];
+  byKey: Map<string, number>;
+  colors: Record<string, string>;
+  clickable: boolean;
 }
 
-export function breakdownData(mode: ComposeMode, rowsForRun: Turn[], componentsForRun: Component[]): Breakdown {
+export function breakdownData(
+  mode: ComposeMode,
+  rowsForRun: Turn[],
+  componentsForRun: Component[],
+): Breakdown {
   const byKey = new Map<string, number>();
   const add = (pos: number, bucket: string | null, tokens: number) => {
     if (bucket == null) return;

@@ -18,13 +18,22 @@ export function parseHash(hash: string): UrlState {
     const eq = seg.indexOf('=');
     if (eq !== -1) map.set(seg.slice(0, eq), seg.slice(eq + 1));
   }
-  const list = (k: string): string[] => { const v = map.get(k); return v ? v.split(',').filter(Boolean) : []; };
-  const theme = map.get('theme'); const view = map.get('view');
+  const list = (k: string): string[] => {
+    const v = map.get(k);
+    return v ? v.split(',').filter(Boolean) : [];
+  };
+  const theme = map.get('theme');
+  const view = map.get('view');
   return {
     report: map.get('report') ?? null,
     theme: theme === 'light' || theme === 'dark' ? theme : null,
     view: ['overview', 's1', 's2', 's3'].includes(view ?? '') ? (view as ViewKey) : null,
-    filter: { task: list('task'), condition: list('condition'), rep: list('rep'), agent: list('agent') },
+    filter: {
+      task: list('task'),
+      condition: list('condition'),
+      rep: list('rep'),
+      agent: list('agent'),
+    },
     s3Condition: list('s3cond'),
   };
 }
@@ -34,7 +43,9 @@ export function toHash(u: UrlState): string {
   if (u.report) parts.push(`report=${u.report}`);
   if (u.theme) parts.push(`theme=${u.theme}`);
   if (u.view) parts.push(`view=${u.view}`);
-  for (const d of DIMS) if (u.filter[d as keyof GlobalFilter].length) parts.push(`${d}=${u.filter[d as keyof GlobalFilter].join(',')}`);
+  for (const d of DIMS)
+    if (u.filter[d as keyof GlobalFilter].length)
+      parts.push(`${d}=${u.filter[d as keyof GlobalFilter].join(',')}`);
   if (u.s3Condition?.length) parts.push(`s3cond=${u.s3Condition.join(',')}`);
   return parts.length ? `#${parts.join('&')}` : '';
 }

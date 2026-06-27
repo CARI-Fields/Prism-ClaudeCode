@@ -12,11 +12,18 @@ export interface Ordered {
 }
 
 export function orderedRequests(
-  typeByIndex: Map<number, string>, rawIndexes: number[], at: string, groupMode: string, typeOrder: string[],
+  typeByIndex: Map<number, string>,
+  rawIndexes: number[],
+  at: string,
+  groupMode: string,
+  typeOrder: string[],
 ): Ordered {
   const indexes = rawIndexes.slice();
   const grouped = groupMode === 'agent' && at === 'all';
-  const rank = (t: string | undefined) => { const k = typeOrder.indexOf(t ?? ''); return k < 0 ? 999 : k; };
+  const rank = (t: string | undefined) => {
+    const k = typeOrder.indexOf(t ?? '');
+    return k < 0 ? 999 : k;
+  };
   if (grouped) indexes.sort((a, b) => rank(typeByIndex.get(a)) - rank(typeByIndex.get(b)) || a - b);
 
   const bands: Ordered['bands'] = [];
@@ -28,7 +35,10 @@ export function orderedRequests(
   });
 
   const ordinal = new Array<number>(indexes.length);
-  for (const g of bands) { let n = 1; for (let p = g.startPos; p <= g.endPos; p++) ordinal[p] = n++; }
+  for (const g of bands) {
+    let n = 1;
+    for (let p = g.startPos; p <= g.endPos; p++) ordinal[p] = n++;
+  }
 
   const annotate = grouped || at !== 'all';
   const xLabels = new Array<string>(indexes.length).fill('');
@@ -40,11 +50,17 @@ export function orderedRequests(
       showLabel[mid] = true;
     }
   } else {
-    indexes.forEach((i, pos) => { xLabels[pos] = `#${i + 1}\n${typeByIndex.get(i) ?? 'main-agent'}`; });
-    if (indexes.length) { showLabel[0] = true; showLabel[indexes.length - 1] = true; }
+    indexes.forEach((i, pos) => {
+      xLabels[pos] = `#${i + 1}\n${typeByIndex.get(i) ?? 'main-agent'}`;
+    });
+    if (indexes.length) {
+      showLabel[0] = true;
+      showLabel[indexes.length - 1] = true;
+    }
   }
   const groupAxisLabels = new Array<string>(indexes.length).fill('');
-  if (annotate) for (const g of bands) groupAxisLabels[Math.floor((g.startPos + g.endPos) / 2)] = g.type;
+  if (annotate)
+    for (const g of bands) groupAxisLabels[Math.floor((g.startPos + g.endPos) / 2)] = g.type;
 
   return { indexes, bands, ordinal, annotate, grouped, xLabels, showLabel, groupAxisLabels };
 }

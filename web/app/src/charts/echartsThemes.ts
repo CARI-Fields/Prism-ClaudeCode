@@ -31,8 +31,20 @@ function theme(ink: string, muted: string, line: string, panel: string, tooltipS
   };
 }
 
-export const REPORT_LIGHT = theme('#0d1320', '#5b6573', '#d7dde6', '#ffffff', '0 6px 20px rgba(13,19,32,0.16)');
-export const REPORT_DARK = theme('#e6ecf4', '#97a3b4', '#313b47', '#1e242c', '0 10px 28px rgba(0,0,0,0.60)');
+export const REPORT_LIGHT = theme(
+  '#0d1320',
+  '#5b6573',
+  '#d7dde6',
+  '#ffffff',
+  '0 6px 20px rgba(13,19,32,0.16)',
+);
+export const REPORT_DARK = theme(
+  '#e6ecf4',
+  '#97a3b4',
+  '#313b47',
+  '#1e242c',
+  '0 10px 28px rgba(0,0,0,0.60)',
+);
 
 export function reportThemeName(mode: 'light' | 'dark'): string {
   return mode === 'dark' ? 'report-dark' : 'report-light';

@@ -2,9 +2,18 @@ import type { EChartsOption } from 'echarts';
 import type { MetricRow, OverheadRow } from './conditionMetrics';
 import type { MatrixCell } from './matrix';
 import {
-  STATUS_COLORS, STATUS_GLYPHS, PALETTE,
-  baseTextStyle, axisLabelStyle, TOOLTIP,
-  valueAxis, catAxis, xName, yName, rightLegend, bottomLegend,
+  STATUS_COLORS,
+  STATUS_GLYPHS,
+  PALETTE,
+  baseTextStyle,
+  axisLabelStyle,
+  TOOLTIP,
+  valueAxis,
+  catAxis,
+  xName,
+  yName,
+  rightLegend,
+  bottomLegend,
 } from './echartsTheme';
 import { fmt, fmtUsd, fmtMetric } from './format';
 import { conditionColor } from '../theme';
@@ -30,8 +39,7 @@ export function matrixOption(m: {
       formatter(params: { data: [number, number, number] }) {
         const cell = cells.find(
           (d) =>
-            colIndex.get(d.condition) === params.data[0] &&
-            rowIndex.get(d.row) === params.data[1],
+            colIndex.get(d.condition) === params.data[0] && rowIndex.get(d.row) === params.data[1],
         );
         if (!cell) return '';
         return [
@@ -95,8 +103,7 @@ export function conditionOption(
             borderRadius: [4, 4, 0, 0] as [number, number, number, number],
           }
         : {
-            color: (p: { dataIndex: number }) =>
-              conditionColor(conditions[p.dataIndex] ?? ''),
+            color: (p: { dataIndex: number }) => conditionColor(conditions[p.dataIndex] ?? ''),
             borderRadius: [4, 4, 0, 0] as [number, number, number, number],
           },
       label: {
@@ -151,16 +158,14 @@ export function overheadOption(
             borderRadius: [4, 4, 0, 0] as [number, number, number, number],
           }
         : {
-            color: (p: { dataIndex: number }) =>
-              conditionColor(conditions[p.dataIndex] ?? ''),
+            color: (p: { dataIndex: number }) => conditionColor(conditions[p.dataIndex] ?? ''),
             borderRadius: [4, 4, 0, 0] as [number, number, number, number],
           },
       label: {
         show: !grouped,
         position: 'top' as const,
         fontSize: 11,
-        formatter: (p: { value: number | null }) =>
-          p.value === null ? '' : `${fmt(p.value, 2)}×`,
+        formatter: (p: { value: number | null }) => (p.value === null ? '' : `${fmt(p.value, 2)}×`),
       },
       markLine:
         ti === 0
@@ -183,9 +188,7 @@ export function overheadOption(
     tooltip: {
       ...TOOLTIP,
       trigger: 'axis' as const,
-      formatter(
-        params: { name: string; seriesName: string; value: number | null }[],
-      ) {
+      formatter(params: { name: string; seriesName: string; value: number | null }[]) {
         return params
           .map(
             (p) =>

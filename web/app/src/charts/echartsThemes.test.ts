@@ -11,8 +11,9 @@ describe('report ECharts themes', () => {
     expect(REPORT_LIGHT.backgroundColor).toBe('transparent');
     expect(REPORT_DARK.backgroundColor).toBe('transparent');
     expect(REPORT_LIGHT.textStyle.color).not.toBe(REPORT_DARK.textStyle.color);
-    expect(REPORT_LIGHT.valueAxis.splitLine.lineStyle.color)
-      .not.toBe(REPORT_DARK.valueAxis.splitLine.lineStyle.color);
+    expect(REPORT_LIGHT.valueAxis.splitLine.lineStyle.color).not.toBe(
+      REPORT_DARK.valueAxis.splitLine.lineStyle.color,
+    );
   });
   it('builders no longer hardcode neutral colors (theme supplies them)', () => {
     expect('color' in axisLabelStyle()).toBe(false);

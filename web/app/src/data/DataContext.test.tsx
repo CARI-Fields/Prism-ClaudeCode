@@ -7,15 +7,28 @@ import { TokenGate } from '../components/TokenGate';
 
 function Probe() {
   const { status, data } = useData();
-  return <div>status:{status} runs:{data ? data.runs.length : 0}</div>;
+  return (
+    <div>
+      status:{status} runs:{data ? data.runs.length : 0}
+    </div>
+  );
 }
 const manifest = { variants: [], strategy_desc: {}, task_meta: {}, available: [] };
 function stubAll(impl: () => Promise<unknown>) {
-  for (const fn of ['getManifest', 'getRuns', 'getTurns', 'getComponents', 'getTokenRates'] as const) {
+  for (const fn of [
+    'getManifest',
+    'getRuns',
+    'getTurns',
+    'getComponents',
+    'getTokenRates',
+  ] as const) {
     vi.spyOn(client, fn).mockImplementation(impl as never);
   }
 }
-afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
+afterEach(() => {
+  vi.restoreAllMocks();
+  localStorage.clear();
+});
 
 describe('DataProvider', () => {
   it('loads and exposes ready data', async () => {
@@ -24,13 +37,22 @@ describe('DataProvider', () => {
     vi.spyOn(client, 'getTurns').mockResolvedValue([] as never);
     vi.spyOn(client, 'getComponents').mockResolvedValue([] as never);
     vi.spyOn(client, 'getTokenRates').mockResolvedValue({} as never);
-    render(<DataProvider><Probe /></DataProvider>);
+    render(
+      <DataProvider>
+        <Probe />
+      </DataProvider>,
+    );
     await waitFor(() => expect(screen.getByText(/status:ready/)).toBeInTheDocument());
     expect(screen.getByText(/runs:1/)).toBeInTheDocument();
   });
   it('enters need-token on 401 and recovers after the gate submits', async () => {
     stubAll(() => Promise.reject(new client.ApiError(401, 'unauthorized')));
-    render(<DataProvider><TokenGate /><Probe /></DataProvider>);
+    render(
+      <DataProvider>
+        <TokenGate />
+        <Probe />
+      </DataProvider>,
+    );
     await waitFor(() => expect(screen.getByText(/status:need-token/)).toBeInTheDocument());
     stubAll(() => Promise.resolve([] as never));
     vi.spyOn(client, 'getManifest').mockResolvedValue(manifest as never);

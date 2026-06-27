@@ -10,23 +10,23 @@
 :root {
   color-scheme: light;
   /* surfaces — cool light grays */
-  --app-bg:        #e6eaef;
-  --app-panel:     #ffffff;
-  --app-panel-2:   #f4f6fa;   /* nested / inset surfaces */
-  --app-rail-bg:   #f2f5f9;
+  --app-bg: #e6eaef;
+  --app-panel: #ffffff;
+  --app-panel-2: #f4f6fa; /* nested / inset surfaces */
+  --app-rail-bg: #f2f5f9;
   /* ink + lines */
-  --app-ink:       #0d1320;
-  --app-muted:     #5b6573;
-  --app-line:      #d7dde6;
-  --app-line-2:    #c6cdd9;   /* emphasis dividers */
+  --app-ink: #0d1320;
+  --app-muted: #5b6573;
+  --app-line: #d7dde6;
+  --app-line-2: #c6cdd9; /* emphasis dividers */
   /* signal accent — cool cyan, used with restraint */
-  --app-accent:    #0b87b0;
-  --app-accent-2:  #096f91;   /* deeper accent for text/links on light */
+  --app-accent: #0b87b0;
+  --app-accent-2: #096f91; /* deeper accent for text/links on light */
   --app-accent-soft: rgba(11, 135, 176, 0.12);
   /* loading skeleton: base block + moving sheen */
   --app-skel-sheen: rgba(255, 255, 255, 0.6);
   /* geometry */
-  --app-radius:    6px;
+  --app-radius: 6px;
   --app-radius-sm: 4px;
   /* type */
   --app-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -36,24 +36,28 @@
 .bp5-dark {
   color-scheme: dark;
   /* surfaces — cool slate graphite */
-  --app-bg:        #14181e;
-  --app-panel:     #1e242c;
-  --app-panel-2:   #232a33;
-  --app-rail-bg:   #181d24;
+  --app-bg: #14181e;
+  --app-panel: #1e242c;
+  --app-panel-2: #232a33;
+  --app-rail-bg: #181d24;
   /* ink + lines */
-  --app-ink:       #e6ecf4;
-  --app-muted:     #97a3b4;
-  --app-line:      #313b47;
-  --app-line-2:    #3d4753;
+  --app-ink: #e6ecf4;
+  --app-muted: #97a3b4;
+  --app-line: #313b47;
+  --app-line-2: #3d4753;
   /* signal accent — electric cyan pops on graphite */
-  --app-accent:    #3cc6e6;
-  --app-accent-2:  #5cd2ee;
+  --app-accent: #3cc6e6;
+  --app-accent-2: #5cd2ee;
   --app-accent-soft: rgba(60, 198, 230, 0.16);
   --app-skel-sheen: rgba(255, 255, 255, 0.07);
 }
 
 /* ----- base ----- */
-html, body, #root { height: 100%; }
+html,
+body,
+#root {
+  height: 100%;
+}
 body {
   margin: 0;
   background: var(--app-bg);
@@ -64,8 +68,13 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-.app-root { min-height: 100%; background: var(--app-bg); }
-.app-shell { min-height: 100%; }
+.app-root {
+  min-height: 100%;
+  background: var(--app-bg);
+}
+.app-shell {
+  min-height: 100%;
+}
 
 /* ----- focus: keyboard-only accent ring on every interactive control ----- */
 .app-root :focus-visible,
@@ -76,7 +85,9 @@ body {
   border-radius: var(--app-radius-sm);
 }
 /* suppress Blueprint's always-on (mouse) :focus ring; keep it for keyboard only */
-.app-root :focus:not(:focus-visible) { outline: none; }
+.app-root :focus:not(:focus-visible) {
+  outline: none;
+}
 
 /* ============================================================================
    Top bar
@@ -97,12 +108,12 @@ body {
   gap: 9px;
   font-weight: 600;
   font-size: 13.5px;
-  letter-spacing: .005em;
+  letter-spacing: 0.005em;
   color: var(--app-ink);
 }
 /* a small "live" telemetry LED — the page's one decorative signature */
 .app-topbar .bp5-navbar-heading::before {
-  content: "";
+  content: '';
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -110,7 +121,9 @@ body {
   box-shadow: 0 0 0 3px var(--app-accent-soft);
   flex: none;
 }
-.app-topbar .bp5-navbar-divider { border-color: var(--app-line); }
+.app-topbar .bp5-navbar-divider {
+  border-color: var(--app-line);
+}
 
 /* ============================================================================
    Tabs — variant switch (top bar) + view nav (canvas). Mono labels, accent rule.
@@ -118,13 +131,20 @@ body {
 .app-topbar .bp5-tab,
 .view-nav .bp5-tab {
   font-family: var(--app-mono);
-  letter-spacing: .01em;
+  letter-spacing: 0.01em;
   color: var(--app-muted);
 }
-.app-topbar .bp5-tab { font-size: 12px; }
-.app-topbar .bp5-tab[aria-selected="true"] { color: var(--app-ink); }
+.app-topbar .bp5-tab {
+  font-size: 12px;
+}
+.app-topbar .bp5-tab[aria-selected='true'] {
+  color: var(--app-ink);
+}
 .app-topbar .bp5-tab-indicator,
-.view-nav .bp5-tab-indicator { background-color: var(--app-accent); height: 2px; }
+.view-nav .bp5-tab-indicator {
+  background-color: var(--app-accent);
+  height: 2px;
+}
 
 /* Report switch: a centered, emphasized segmented control in the top bar. */
 .topbar-variants {
@@ -148,40 +168,58 @@ body {
   font-size: 12.5px;
   padding: 5px 16px;
   border-radius: var(--app-radius-sm);
-  transition: background-color .12s ease, color .12s ease;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
 }
-.topbar-variants .bp5-tab:hover { color: var(--app-ink); }
-.topbar-variants .bp5-tab[aria-selected="true"] {
+.topbar-variants .bp5-tab:hover {
+  color: var(--app-ink);
+}
+.topbar-variants .bp5-tab[aria-selected='true'] {
   color: var(--app-accent-2);
   font-weight: 600;
   background: var(--app-accent-soft);
 }
-.topbar-variants .bp5-tab-indicator { display: none; }
+.topbar-variants .bp5-tab-indicator {
+  display: none;
+}
 
 /* View nav: make the active section read as a clear, prominent selection. */
 .view-nav.bp5-tabs .bp5-tab {
   font-size: 13px;
   padding: 5px 12px;
   border-radius: var(--app-radius-sm);
-  transition: background-color .12s ease, color .12s ease;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
 }
-.view-nav.bp5-tabs .bp5-tab:hover { color: var(--app-ink); background: var(--app-accent-soft); }
-.view-nav.bp5-tabs .bp5-tab[aria-selected="true"] {
+.view-nav.bp5-tabs .bp5-tab:hover {
+  color: var(--app-ink);
+  background: var(--app-accent-soft);
+}
+.view-nav.bp5-tabs .bp5-tab[aria-selected='true'] {
   color: var(--app-accent-2);
   font-weight: 600;
   background: var(--app-accent-soft);
 }
-.view-nav.bp5-tabs .bp5-tab-indicator { height: 3px; }
+.view-nav.bp5-tabs .bp5-tab-indicator {
+  height: 3px;
+}
 .view-nav.bp5-tabs {
   margin-bottom: 18px;
   border-bottom: 1px solid var(--app-line);
 }
-.view-nav .bp5-tab-list { gap: 4px; }
+.view-nav .bp5-tab-list {
+  gap: 4px;
+}
 
 /* ============================================================================
    Body grid: rail + canvas
    ========================================================================== */
-.app-body { display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+.app-body {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+}
 .app-rail {
   background: var(--app-rail-bg);
   border-right: 1px solid var(--app-line);
@@ -191,36 +229,65 @@ body {
   top: 52px;
   align-self: start;
 }
-.app-canvas { padding: 22px 26px 64px; max-width: 1320px; }
+.app-canvas {
+  padding: 22px 26px 64px;
+  max-width: 1320px;
+}
 
 /* ============================================================================
    Filter rail
    ========================================================================== */
-.rail { font-family: var(--app-sans); }
-.rail-top, .rail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.rail-top { margin-bottom: 6px; }
+.rail {
+  font-family: var(--app-sans);
+}
+.rail-top,
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rail-top {
+  margin-bottom: 6px;
+}
 .rail-title {
   font-family: var(--app-mono);
   font-size: 10.5px;
-  letter-spacing: .18em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--app-muted);
 }
-.rail-group { margin: 16px 0; padding-top: 14px; border-top: 1px solid var(--app-line); }
-.rail-group:first-of-type { border-top: none; padding-top: 0; }
+.rail-group {
+  margin: 16px 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--app-line);
+}
+.rail-group:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
 .rail-name {
   font-family: var(--app-mono);
   font-size: 11px;
-  letter-spacing: .1em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--app-ink);
   font-weight: 600;
 }
-.rail-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.rail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
 .rail-dot {
-  width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex: none;
   display: inline-block;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
 }
 
 /* rail "clear/reset" mono micro-buttons */
@@ -228,14 +295,16 @@ body {
 .rail-head .bp5-button {
   font-family: var(--app-mono);
   font-size: 10px;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--app-muted);
   min-height: 0;
   padding: 2px 4px;
 }
 .rail-top .bp5-button:hover,
-.rail-head .bp5-button:hover { color: var(--app-accent-2); }
+.rail-head .bp5-button:hover {
+  color: var(--app-accent-2);
+}
 
 /* ============================================================================
    Filter chips (Blueprint Tag): crisp outlines; selected = inverted ink fill
@@ -243,10 +312,13 @@ body {
 .rail-chips .bp5-tag {
   font-family: var(--app-mono);
   font-size: 11.5px;
-  letter-spacing: .01em;
+  letter-spacing: 0.01em;
   min-height: 22px;
   padding: 2px 9px;
-  transition: color .12s ease, background-color .12s ease, border-color .12s ease;
+  transition:
+    color 0.12s ease,
+    background-color 0.12s ease,
+    border-color 0.12s ease;
 }
 .rail-chips .bp5-tag.bp5-minimal {
   color: var(--app-muted);
@@ -273,22 +345,52 @@ body {
   border-radius: var(--app-radius);
   box-shadow: none;
 }
-.panel-card { min-width: 0; padding: 15px 17px 17px; }
-.panel-title { font-size: 14px; font-weight: 600; letter-spacing: -.005em; margin: 0 0 10px; color: var(--app-ink); }
-.panel-lede { margin: 0 0 12px; color: var(--app-muted); font-size: 13px; line-height: 1.5; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; margin-bottom: 6px; }
-.panel-head .panel-title { margin: 0; }
+.panel-card {
+  min-width: 0;
+  padding: 15px 17px 17px;
+}
+.panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin: 0 0 10px;
+  color: var(--app-ink);
+}
+.panel-lede {
+  margin: 0 0 12px;
+  color: var(--app-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  margin-bottom: 6px;
+}
+.panel-head .panel-title {
+  margin: 0;
+}
 
 /* ============================================================================
    KPI row — the hero readout. Big mono numerals, tabular figures.
    ========================================================================== */
-.kpi-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
-.kpi-card { padding: 13px 15px 14px; }
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.kpi-card {
+  padding: 13px 15px 14px;
+}
 .kpi-label {
   font-family: var(--app-mono);
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: .11em;
+  letter-spacing: 0.11em;
   color: var(--app-muted);
 }
 .kpi-value {
@@ -296,7 +398,7 @@ body {
   font-size: 25px;
   font-weight: 600;
   line-height: 1.05;
-  letter-spacing: -.015em;
+  letter-spacing: -0.015em;
   margin-top: 8px;
   color: var(--app-ink);
   font-variant-numeric: tabular-nums;
@@ -305,8 +407,16 @@ body {
 /* ============================================================================
    Overview — orientation panel + strategy legend
    ========================================================================== */
-.overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.strategy-legend { list-style: none; padding: 0; margin: 4px 0 0; }
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.strategy-legend {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+}
 .strategy-legend li {
   display: flex;
   align-items: baseline;
@@ -316,7 +426,9 @@ body {
   font-size: 13px;
   line-height: 1.45;
 }
-.strategy-legend li .rail-dot { align-self: center; }
+.strategy-legend li .rail-dot {
+  align-self: center;
+}
 .strategy-legend li b {
   font-family: var(--app-mono);
   font-size: 12px;
@@ -327,49 +439,106 @@ body {
 /* ============================================================================
    Section views — grids, status key, sub-headings, charts
    ========================================================================== */
-.view-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.view-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
 /* §1 holds an odd number of cards when the baseline (overhead) panel is present;
    let the trailing card span both columns so the grid never leaves an empty cell. */
-.view-grid > .panel-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
-.view-stack { display: grid; gap: 16px; }
+.view-grid > .panel-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.view-stack {
+  display: grid;
+  gap: 16px;
+}
 
 .status-key {
-  display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px;
-  font-family: var(--app-mono); font-size: 11px; color: var(--app-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  font-family: var(--app-mono);
+  font-size: 11px;
+  color: var(--app-muted);
 }
-.status-key .status-swatch { display: inline-flex; align-items: center; }
+.status-key .status-swatch {
+  display: inline-flex;
+  align-items: center;
+}
 .status-key .status-swatch span:first-child {
-  display: inline-flex; width: 16px; height: 16px;
-  align-items: center; justify-content: center;
-  border-radius: var(--app-radius-sm); margin-right: 6px;
-  color: #fff; font-size: 10px;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--app-radius-sm);
+  margin-right: 6px;
+  color: #fff;
+  font-size: 10px;
 }
 
 .cache-sub {
-  font-family: var(--app-mono); font-size: 11px;
-  text-transform: uppercase; letter-spacing: .09em;
-  color: var(--app-muted); margin: 12px 0 2px;
+  font-family: var(--app-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--app-muted);
+  margin: 12px 0 2px;
 }
-.chart { width: 100%; height: 340px; }
-.chart.short { height: 290px; }
-.chart.tall { height: 440px; }
+.chart {
+  width: 100%;
+  height: 340px;
+}
+.chart.short {
+  height: 290px;
+}
+.chart.tall {
+  height: 440px;
+}
 
 /* §3 single-run controls */
 .s3-controls {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin-top: 14px;
-  padding-top: 12px; border-top: 1px solid var(--app-line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 18px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-line);
 }
 .s3-controls label {
-  display: flex; align-items: center; gap: 8px;
-  font-family: var(--app-mono); font-size: 10.5px; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--app-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--app-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-muted);
 }
-.s3-controls .bp5-slider { width: 130px; min-width: 130px; }
+.s3-controls .bp5-slider {
+  width: 130px;
+  min-width: 130px;
+}
 /* The cache-hit checkbox is a Blueprint control whose absolute indicator + bottom
    margin throw it off the row's baseline — pull it inline with the other controls. */
-.s3-controls .bp5-checkbox.bp5-control { margin: 0; padding-left: 0; min-height: 0; }
-.s3-controls .bp5-checkbox .bp5-control-indicator { position: static; margin: 0; }
-.run-tag { font-family: var(--app-mono); font-size: 11px; letter-spacing: .02em; color: var(--app-muted); }
+.s3-controls .bp5-checkbox.bp5-control {
+  margin: 0;
+  padding-left: 0;
+  min-height: 0;
+}
+.s3-controls .bp5-checkbox .bp5-control-indicator {
+  position: static;
+  margin: 0;
+}
+.run-tag {
+  font-family: var(--app-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--app-muted);
+}
 
 /* ============================================================================
    Context text panel (§3) — captured prompt / source preview
@@ -381,22 +550,46 @@ body {
   overflow: hidden;
 }
 .ctx-head {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px;
-  padding: 9px 13px; border-bottom: 1px solid var(--app-line);
-  font-family: var(--app-mono); font-size: 11px; color: var(--app-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--app-line);
+  font-family: var(--app-mono);
+  font-size: 11px;
+  color: var(--app-muted);
 }
-.ctx-head b { color: var(--app-ink); font-size: 12px; font-weight: 600; }
-.ctx-trunc { color: #b4690e; }
-.bp5-dark .ctx-trunc { color: #f1a23c; }
+.ctx-head b {
+  color: var(--app-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ctx-trunc {
+  color: #b4690e;
+}
+.bp5-dark .ctx-trunc {
+  color: #f1a23c;
+}
 .ctx-body {
-  margin: 0; padding: 12px 13px; max-height: 300px; overflow: auto;
-  white-space: pre-wrap; word-break: break-word;
-  font-family: var(--app-mono); font-size: 11.5px; line-height: 1.55; color: var(--app-ink);
+  margin: 0;
+  padding: 12px 13px;
+  max-height: 300px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--app-mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--app-ink);
 }
 .app-root .ctx-text-panel .ctx-empty.bp5-callout,
 .ctx-empty {
-  padding: 11px 13px; color: var(--app-muted);
-  font-family: var(--app-mono); font-size: 11.5px; background: transparent;
+  padding: 11px 13px;
+  color: var(--app-muted);
+  font-family: var(--app-mono);
+  font-size: 11.5px;
+  background: transparent;
 }
 
 /* ============================================================================
@@ -410,71 +603,162 @@ body {
   overflow: hidden;
 }
 .skel::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
   background: linear-gradient(90deg, transparent, var(--app-skel-sheen), transparent);
   animation: skel-shimmer 1.3s ease-in-out infinite;
 }
-.skel-line { height: 12px; }
-.skel-row { display: flex; align-items: center; gap: 10px; }
-.skel-topbar { display: flex; align-items: center; justify-content: space-between; }
-.skel-rail-head { width: 88px; height: 11px; margin-bottom: 11px; }
-.skel-chip { width: 64px; height: 22px; border-radius: 999px; }
-.skel-nav { gap: 18px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--app-line); }
-.skel-card { display: flex; flex-direction: column; gap: 10px; }
-.skel-kpi-value { height: 26px; width: 72%; }
-.skel-chart { display: block; width: 100%; height: 300px; border-radius: var(--app-radius); }
+.skel-line {
+  height: 12px;
+}
+.skel-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.skel-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.skel-rail-head {
+  width: 88px;
+  height: 11px;
+  margin-bottom: 11px;
+}
+.skel-chip {
+  width: 64px;
+  height: 22px;
+  border-radius: 999px;
+}
+.skel-nav {
+  gap: 18px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--app-line);
+}
+.skel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.skel-kpi-value {
+  height: 26px;
+  width: 72%;
+}
+.skel-chart {
+  display: block;
+  width: 100%;
+  height: 300px;
+  border-radius: var(--app-radius);
+}
 
-@keyframes skel-shimmer { 100% { transform: translateX(100%); } }
+@keyframes skel-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .skel::after { animation: none; }
+  .skel::after {
+    animation: none;
+  }
 }
 
 /* ============================================================================
    Blueprint control accents (selects, switch) — replace default blue
    ========================================================================== */
-.app-root .bp5-switch input:checked ~ .bp5-control-indicator { background: var(--app-accent); }
+.app-root .bp5-switch input:checked ~ .bp5-control-indicator {
+  background: var(--app-accent);
+}
 .app-root .bp5-html-select select,
 .app-root .bp5-html-select select:focus {
   font-family: var(--app-mono);
   font-size: 12px;
 }
 .app-root .bp5-slider-progress.bp5-intent-primary,
-.app-root .bp5-slider-handle { background-color: var(--app-accent); }
+.app-root .bp5-slider-handle {
+  background-color: var(--app-accent);
+}
 
 /* ============================================================================
    Responsive — rail stacks above canvas; tighter density on small screens
    ========================================================================== */
 @media (max-width: 880px) {
-  .app-body { grid-template-columns: 1fr; }
+  .app-body {
+    grid-template-columns: 1fr;
+  }
   .app-rail {
-    position: static; top: auto; min-height: 0;
-    border-right: none; border-bottom: 1px solid var(--app-line);
+    position: static;
+    top: auto;
+    min-height: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--app-line);
     padding: 14px 16px 18px;
   }
-  .app-canvas { padding: 18px 16px 56px; }
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .app-canvas {
+    padding: 18px 16px 56px;
+  }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .overview-grid,
-  .view-grid { grid-template-columns: 1fr; }
-  .chart { height: 300px; }
-  .chart.tall { height: 380px; }
+  .view-grid {
+    grid-template-columns: 1fr;
+  }
+  .chart {
+    height: 300px;
+  }
+  .chart.tall {
+    height: 380px;
+  }
 }
 
 /* ----- ambient: a slow live-pulse on the telemetry LED (motion-respectful) ----- */
 @media (prefers-reduced-motion: no-preference) {
-  .app-topbar .bp5-navbar-heading::before { animation: led-pulse 2.6s ease-in-out infinite; }
+  .app-topbar .bp5-navbar-heading::before {
+    animation: led-pulse 2.6s ease-in-out infinite;
+  }
   @keyframes led-pulse {
-    0%, 100% { box-shadow: 0 0 0 3px var(--app-accent-soft); }
-    50%      { box-shadow: 0 0 0 5px transparent; }
+    0%,
+    100% {
+      box-shadow: 0 0 0 3px var(--app-accent-soft);
+    }
+    50% {
+      box-shadow: 0 0 0 5px transparent;
+    }
   }
 }
 
 /* ============================================================================
    Run Picker — per-run export checklist
    ========================================================================== */
-.run-picker { display: flex; flex-direction: column; gap: 12px; min-width: 360px; }
-.run-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--app-line); }
-.run-picker-list { display: flex; flex-direction: column; gap: 2px; max-height: 360px; overflow: auto; font-family: var(--app-mono); font-size: 12px; }
-.run-picker-error { color: #e03131; font-size: 12px; margin: 0; }
+.run-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 360px;
+}
+.run-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--app-line);
+}
+.run-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 360px;
+  overflow: auto;
+  font-family: var(--app-mono);
+  font-size: 12px;
+}
+.run-picker-error {
+  color: #e03131;
+  font-size: 12px;
+  margin: 0;
+}

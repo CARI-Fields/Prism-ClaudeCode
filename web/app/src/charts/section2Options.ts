@@ -65,8 +65,8 @@ export function cacheOption(
   const series = [...groups.values()]
     .sort(
       (a, b) =>
-        ((condOrder.get(a.condition) ?? 999) - (condOrder.get(b.condition) ?? 999)) ||
-        (a.rep - b.rep) ||
+        (condOrder.get(a.condition) ?? 999) - (condOrder.get(b.condition) ?? 999) ||
+        a.rep - b.rep ||
         a.type.localeCompare(b.type),
     )
     .map((g) => {
@@ -167,7 +167,12 @@ export function latencyOption(turns: Turn[], conditions: string[]): EChartsOptio
     };
     // security-monitor renders hollow (outline only); others are filled
     if (spec.hollow) {
-      item.itemStyle = { color: 'transparent', borderColor: color, borderWidth: 1.6, opacity: 0.95 };
+      item.itemStyle = {
+        color: 'transparent',
+        borderColor: color,
+        borderWidth: 1.6,
+        opacity: 0.95,
+      };
     }
     byCondition.get(turn.condition)!.push(item);
   }

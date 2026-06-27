@@ -14,11 +14,11 @@ export function RunPicker() {
   const toggle = (id: string) =>
     setSelected((s) => {
       const n = new Set(s);
-      if (n.has(id)) n.delete(id); else n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
-  const toggleAll = () =>
-    setSelected(allSelected ? new Set() : new Set(runs.map((r) => r.run_id)));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(runs.map((r) => r.run_id)));
   // Download the runs in the order they appear in the list (stable, not Set order).
   const orderedSelected = runs.map((r) => r.run_id).filter((id) => selected.has(id));
 
@@ -54,7 +54,9 @@ export function RunPicker() {
         icon="download"
         loading={busy}
         disabled={orderedSelected.length === 0}
-        text={`Download ${orderedSelected.length || ''} ${orderedSelected.length === 1 ? 'trace' : 'traces'}`.replace('  ', ' ').trim()}
+        text={`Download ${orderedSelected.length || ''} ${orderedSelected.length === 1 ? 'trace' : 'traces'}`
+          .replace('  ', ' ')
+          .trim()}
         onClick={() => download(orderedSelected, includeTexts)}
       />
     </div>

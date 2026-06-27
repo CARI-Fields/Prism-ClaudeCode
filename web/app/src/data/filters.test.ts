@@ -19,13 +19,17 @@ describe('filters', () => {
     expect(scopeRuns(runs, [], sec({}))).toHaveLength(3);
   });
   it('global task + section condition narrow runs', () => {
-    expect(scopeRuns(runs, ['coding'], sec({ condition: ['subagents'] })).map((r) => r.run_id)).toEqual(['b']);
+    expect(
+      scopeRuns(runs, ['coding'], sec({ condition: ['subagents'] })).map((r) => r.run_id),
+    ).toEqual(['b']);
   });
   it('rep matches r-prefixed token', () => {
     expect(scopeRuns(runs, [], sec({ rep: ['r1'] })).map((r) => r.run_id)).toEqual(['a', 'c']);
   });
   it('scopeTurns filters by agent and drops null when agent set', () => {
-    expect(scopeTurns(turns, [], sec({ agent: ['task-subagent'] })).map((t) => t.run_id)).toEqual(['b']);
+    expect(scopeTurns(turns, [], sec({ agent: ['task-subagent'] })).map((t) => t.run_id)).toEqual([
+      'b',
+    ]);
   });
   it('presentAgentTypes returns sorted distinct non-null', () => {
     expect(presentAgentTypes(turns)).toEqual(['main-agent', 'task-subagent']);
@@ -35,11 +39,14 @@ describe('filters', () => {
   // user selection alone leaked the other variant's runs into a view.
   it('inVariantRuns keeps only rows whose task AND condition belong to the variant', () => {
     const mixed = [
-      { run_id: 'm', task: 'coding', condition: 'dynamic_workflow', rep: 1 },          // multi-agent
+      { run_id: 'm', task: 'coding', condition: 'dynamic_workflow', rep: 1 }, // multi-agent
       { run_id: 'l', task: 'coding_longhorizon', condition: 'dynamic_workflow', rep: 1 }, // long-horizon (shared condition)
-      { run_id: 'x', task: 'coding_longhorizon', condition: 'single_agent', rep: 1 },   // wrong condition for long-horizon
+      { run_id: 'x', task: 'coding_longhorizon', condition: 'single_agent', rep: 1 }, // wrong condition for long-horizon
     ] as unknown as Run[];
-    const lh = { tasks: ['coding_longhorizon', 'research_longhorizon'], conditions: ['goal', 'ralph_loop', 'dynamic_workflow'] };
+    const lh = {
+      tasks: ['coding_longhorizon', 'research_longhorizon'],
+      conditions: ['goal', 'ralph_loop', 'dynamic_workflow'],
+    };
     expect(inVariantRuns(mixed, lh).map((r) => r.run_id)).toEqual(['l']);
   });
   it('inVariantTurns scopes turns to the variant the same way', () => {

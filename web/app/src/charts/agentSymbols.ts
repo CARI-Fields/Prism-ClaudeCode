@@ -19,7 +19,7 @@ export const AGENT_TYPE_ORDER = Object.keys(REQUEST_TYPE_SYMBOLS);
 
 export function agentDotSpec(type: string): { size: number; hollow: boolean } {
   const t = type || 'main-agent';
-  if (t === 'main-agent') return { size: 6, hollow: false };      // solid circle
+  if (t === 'main-agent') return { size: 6, hollow: false }; // solid circle
   if (t === 'security-monitor') return { size: 7, hollow: true }; // hollow diamond
-  return { size: 8, hollow: false };                              // subagents -- own shape
+  return { size: 8, hollow: false }; // subagents -- own shape
 }

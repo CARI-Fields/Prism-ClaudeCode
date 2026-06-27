@@ -2,8 +2,10 @@ import type { Run } from '../types';
 
 export interface Kpis {
   runs: number;
-  meanRequests: number | null; meanCost: number | null;
-  meanQuality: number | null; meanCacheHit: number | null;
+  meanRequests: number | null;
+  meanCost: number | null;
+  meanQuality: number | null;
+  meanCacheHit: number | null;
 }
 function mean(values: Array<number | null | undefined>): number | null {
   const nums = values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));

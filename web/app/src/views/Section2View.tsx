@@ -13,7 +13,8 @@ export function Section2View() {
   const { report } = useReport();
   const { effective, effectiveTask } = useFilter();
   const { mode } = useTheme();
-  const variant = data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
+  const variant =
+    data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
   const sel = effective('s2');
   const selTask = effectiveTask('s2');
   const turns = useMemo(
@@ -31,7 +32,15 @@ export function Section2View() {
         {tasks.map((task) => (
           <div key={task}>
             <h3 className="cache-sub">{taskLabel(task)}</h3>
-            <EChart className="chart short" themeMode={mode} option={cacheOption(cacheByAgent(turns.filter((t) => t.task === task)), conds, singleAgent)} />
+            <EChart
+              className="chart short"
+              themeMode={mode}
+              option={cacheOption(
+                cacheByAgent(turns.filter((t) => t.task === task)),
+                conds,
+                singleAgent,
+              )}
+            />
           </div>
         ))}
       </Card>
