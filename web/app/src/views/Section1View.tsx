@@ -33,16 +33,18 @@ export function Section1View() {
   const [metric, setMetric] = useState('mean_completion_time_s');
   const [overhead, setOverhead] = useState('num_requests_factor');
   const variant = data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
-  const runs = useMemo(() => scopeRuns(data?.runs ?? [], effectiveTask('s1'), effective('s1')), [data, effective, effectiveTask]);
+  const sel = effective('s1');
+  const selTask = effectiveTask('s1');
+  const scopedRuns = useMemo(() => scopeRuns(data?.runs ?? [], selTask, sel), [data, selTask, sel]);
   if (!variant) return null;
 
   const hasBaseline = variant.conditions.includes('single_agent');
-  const conds = effective('s1').condition.length ? effective('s1').condition : variant.conditions;
-  const tasks = effectiveTask('s1').length ? effectiveTask('s1') : variant.tasks;
-  const reps = Array.from(new Set(runs.map((r) => r.rep))).sort((a, b) => a - b);
-  const metrics = conditionMetrics(runs, tasks, variant.conditions);
+  const conds = sel.condition.length ? sel.condition : variant.conditions;
+  const tasks = selTask.length ? selTask : variant.tasks;
+  const reps = Array.from(new Set(scopedRuns.map((r) => r.rep))).sort((a, b) => a - b);
+  const metrics = conditionMetrics(scopedRuns, tasks, variant.conditions);
   const overheads = conditionOverheads(metrics, tasks, variant.conditions);
-  const matrix = matrixData(runs, tasks, reps, conds);
+  const matrix = matrixData(scopedRuns, tasks, reps, conds);
   const metricLabel = METRICS.find(([v]) => v === metric)?.[1] ?? metric;
   const overheadLabel = OVERHEADS.find(([v]) => v === overhead)?.[1] ?? overhead;
 

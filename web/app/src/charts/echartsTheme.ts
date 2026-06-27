@@ -7,7 +7,9 @@ const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 
 export function baseTextStyle() { return { fontFamily: MONO }; }
 export function axisLabelStyle() { return { fontFamily: MONO, fontSize: 11 }; }
-export const TOOLTIP = { confine: true, padding: [8, 11] as [number, number], extraCssText: 'border-radius:8px;' };
+// Per-option tooltips omit `extraCssText` so the registered theme's rounded
+// corners + per-mode drop-shadow (see echartsThemes.ts) apply on every chart.
+export const TOOLTIP = { confine: true, padding: [8, 11] as [number, number] };
 
 export function valueAxis(extra: Record<string, unknown> = {}) {
   return { type: 'value', axisLabel: { ...axisLabelStyle(), formatter: fmtAxis }, ...extra };

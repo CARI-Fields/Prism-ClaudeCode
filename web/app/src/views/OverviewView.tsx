@@ -16,7 +16,9 @@ export function OverviewView() {
   const { mode } = useTheme();
   const variant = data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
   const runs = data?.runs ?? [];
-  const scoped = useMemo(() => scopeRuns(runs, effectiveTask('overview'), effective('overview')), [runs, effective, effectiveTask]);
+  const sel = effective('overview');
+  const selTask = effectiveTask('overview');
+  const scoped = useMemo(() => scopeRuns(runs, selTask, sel), [runs, selTask, sel]);
   if (!variant || !data) return null;
 
   const k = computeKpis(scoped);
@@ -27,7 +29,7 @@ export function OverviewView() {
     { label: 'Mean quality', value: fmt(k.meanQuality, 2) },
     { label: 'Mean cache hit', value: k.meanCacheHit == null ? '—' : `${(k.meanCacheHit * 100).toFixed(0)}%` },
   ];
-  const tasks = effectiveTask('overview').length ? effectiveTask('overview') : variant.tasks;
+  const tasks = selTask.length ? selTask : variant.tasks;
   const reps = Array.from(new Set(scoped.map((r) => r.rep))).sort((a, b) => a - b);
   const matrix = matrixData(scoped, tasks, reps, variant.conditions);
 
