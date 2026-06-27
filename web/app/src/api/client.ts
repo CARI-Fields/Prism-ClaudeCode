@@ -26,3 +26,13 @@ export const getComponentTexts = (runId: string, requestIndex?: number) =>
     `/api/component-texts?run_id=${encodeURIComponent(runId)}` +
       (requestIndex != null ? `&request_index=${requestIndex}` : ''),
   );
+
+export async function fetchExport(runIds: string[], includeTexts: boolean): Promise<Blob> {
+  const runs = runIds.map(encodeURIComponent).join(',');
+  const res = await fetch(`${apiBase()}/api/export?runs=${runs}&texts=${includeTexts ? 1 : 0}`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+  if (res.status === 401) throw new ApiError(401, 'unauthorized');
+  if (!res.ok) throw new ApiError(res.status, `export failed: ${res.status}`);
+  return res.blob();
+}

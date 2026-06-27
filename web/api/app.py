@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Query
+from datetime import datetime, timezone
+
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from web.api import queries
+from web.api import export, queries
 from web.api.auth import require_token
 from web.api.config import get_settings
 from web.api.data_source import ensure_data
@@ -66,3 +68,18 @@ def component_texts(
 @app.get("/api/token-rates", dependencies=_GATE)
 def token_rates() -> dict:
     return queries.get_token_rates()
+
+
+@app.get("/api/export", dependencies=_GATE)
+def export_zip(runs: str = Query(...), texts: int = Query(default=0)) -> Response:
+    run_ids = [r for r in runs.split(",") if r]
+    try:
+        data = export.build_zip(run_ids, include_texts=bool(texts))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="no valid run_ids")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="cc-traces-{ts}.zip"'},
+    )
