@@ -81,3 +81,40 @@ def test_build_zip_empty_raises(data_dir):
     from web.api import export
     with pytest.raises(ValueError):
         export.build_zip(["bogus"], include_texts=False)
+
+
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def client(data_dir, monkeypatch):
+    monkeypatch.setenv("API_TOKEN", "secret123")
+    from web.api.app import app
+    return TestClient(app)
+
+
+AUTH = {"Authorization": "Bearer secret123"}
+
+
+def test_export_requires_token(client):
+    assert client.get("/api/export", params={"runs": "r1"}).status_code == 401
+
+
+def test_export_returns_zip(client):
+    r = client.get("/api/export", params={"runs": "r1", "texts": 0}, headers=AUTH)
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/zip"
+    assert "attachment" in r.headers["content-disposition"]
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    assert "runs/r1.jsonl" in set(z.namelist())
+    assert "runs/r1.texts.jsonl" not in set(z.namelist())
+
+
+def test_export_texts_flag(client):
+    r = client.get("/api/export", params={"runs": "r1", "texts": 1}, headers=AUTH)
+    assert "runs/r1.texts.jsonl" in set(zipfile.ZipFile(io.BytesIO(r.content)).namelist())
+
+
+def test_export_empty_selection_400(client):
+    assert client.get("/api/export", params={"runs": "bogus"}, headers=AUTH).status_code == 400
+    assert client.get("/api/export", params={"runs": ""}, headers=AUTH).status_code == 400
