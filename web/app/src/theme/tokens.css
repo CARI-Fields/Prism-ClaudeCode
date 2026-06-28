@@ -23,6 +23,9 @@
   --app-accent:    #0b87b0;
   --app-accent-2:  #096f91;   /* deeper accent for text/links on light */
   --app-accent-soft: rgba(11, 135, 176, 0.12);
+  /* raised surface for the active segment of a segmented control */
+  --app-elevated: #ffffff;
+  --app-elevated-shadow: 0 1px 2px rgba(13, 19, 32, 0.12), 0 0 0 1px rgba(13, 19, 32, 0.05);
   /* loading skeleton: base block + moving sheen */
   --app-skel-sheen: rgba(255, 255, 255, 0.6);
   /* geometry */
@@ -49,6 +52,9 @@
   --app-accent:    #3cc6e6;
   --app-accent-2:  #5cd2ee;
   --app-accent-soft: rgba(60, 198, 230, 0.16);
+  /* in dark, the raised thumb is a lighter slate than the inset track */
+  --app-elevated: #2c343e;
+  --app-elevated-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   --app-skel-sheen: rgba(255, 255, 255, 0.07);
 }
 
@@ -59,7 +65,7 @@ body {
   background: var(--app-bg);
   color: var(--app-ink);
   font-family: var(--app-sans);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -138,24 +144,33 @@ body {
   z-index: 1;
 }
 .topbar-variants .bp5-tab-list {
-  gap: 4px;
+  display: flex;
+  gap: 3px;
   background: var(--app-panel-2);
   border: 1px solid var(--app-line);
   border-radius: var(--app-radius);
   padding: 3px;
 }
+/* equal-width segments read as a deliberate control, not two stray tabs */
 .topbar-variants .bp5-tab {
+  flex: 1 1 0;
+  min-width: 168px;
+  text-align: center;
   font-size: 12.5px;
   padding: 5px 16px;
   border-radius: var(--app-radius-sm);
-  transition: background-color .12s ease, color .12s ease;
+  color: var(--app-muted);
+  transition: background-color .12s ease, color .12s ease, box-shadow .12s ease;
 }
 .topbar-variants .bp5-tab:hover { color: var(--app-ink); }
+/* the active segment lifts off the inset track as a raised thumb */
 .topbar-variants .bp5-tab[aria-selected="true"] {
   color: var(--app-accent-2);
   font-weight: 600;
-  background: var(--app-accent-soft);
+  background: var(--app-elevated);
+  box-shadow: var(--app-elevated-shadow);
 }
+.topbar-variants .bp5-tab[aria-selected="true"]:hover { color: var(--app-accent-2); }
 .topbar-variants .bp5-tab-indicator { display: none; }
 
 /* View nav: make the active section read as a clear, prominent selection. */
@@ -274,8 +289,8 @@ body {
   box-shadow: none;
 }
 .panel-card { min-width: 0; padding: 15px 17px 17px; }
-.panel-title { font-size: 14px; font-weight: 600; letter-spacing: -.005em; margin: 0 0 10px; color: var(--app-ink); }
-.panel-lede { margin: 0 0 12px; color: var(--app-muted); font-size: 13px; line-height: 1.5; }
+.panel-title { font-size: 15px; font-weight: 600; letter-spacing: -.005em; margin: 0 0 10px; color: var(--app-ink); }
+.panel-lede { margin: 0 0 12px; color: var(--app-muted); font-size: 14px; line-height: 1.55; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; margin-bottom: 6px; }
 .panel-head .panel-title { margin: 0; }
 
@@ -313,13 +328,13 @@ body {
   gap: 4px;
   margin: 9px 0;
   color: var(--app-muted);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.5;
 }
 .strategy-legend li .rail-dot { align-self: center; }
 .strategy-legend li b {
   font-family: var(--app-mono);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--app-ink);
 }
@@ -391,7 +406,7 @@ body {
 .ctx-body {
   margin: 0; padding: 12px 13px; max-height: 300px; overflow: auto;
   white-space: pre-wrap; word-break: break-word;
-  font-family: var(--app-mono); font-size: 11.5px; line-height: 1.55; color: var(--app-ink);
+  font-family: var(--app-mono); font-size: 12.5px; line-height: 1.6; color: var(--app-ink);
 }
 .app-root .ctx-text-panel .ctx-empty.bp5-callout,
 .ctx-empty {
