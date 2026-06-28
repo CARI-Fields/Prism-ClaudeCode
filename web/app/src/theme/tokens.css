@@ -321,6 +321,54 @@ body {
    Overview — orientation panel + strategy legend
    ========================================================================== */
 .overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+/* Task briefs: one card per task — domain eyebrow, title, what-it-measures, and
+   the full prompt spec in a collapsible block. */
+.task-briefs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.task-brief-head { display: flex; align-items: baseline; gap: 10px; }
+.task-brief-eyebrow {
+  font-family: var(--app-mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--app-accent-2);
+  flex: none;
+}
+.task-brief .panel-title { margin: 0 0 6px; }
+.task-prompt { margin-top: 12px; border-top: 1px solid var(--app-line); padding-top: 10px; }
+.task-prompt > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--app-mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+.task-prompt > summary::-webkit-details-marker { display: none; }
+.task-prompt > summary::before { content: "\25B8"; color: var(--app-accent); font-size: 10px; }
+.task-prompt[open] > summary::before { content: "\25BE"; }
+.task-prompt > summary:hover { color: var(--app-ink); }
+.task-prompt-src { text-transform: none; letter-spacing: 0; opacity: .7; }
+.task-prompt pre {
+  margin: 10px 0 0;
+  padding: 12px 13px;
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--app-panel-2);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius-sm);
+  font-family: var(--app-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--app-ink);
+}
+.task-prompt-empty { margin: 12px 0 0; color: var(--app-muted); font-size: 13px; font-style: italic; }
 .strategy-legend { list-style: none; padding: 0; margin: 4px 0 0; }
 .strategy-legend li {
   display: flex;
@@ -472,6 +520,7 @@ body {
   .app-canvas { padding: 18px 16px 56px; }
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
   .overview-grid,
+  .task-briefs,
   .view-grid { grid-template-columns: 1fr; }
   .chart { height: 300px; }
   .chart.tall { height: 380px; }
