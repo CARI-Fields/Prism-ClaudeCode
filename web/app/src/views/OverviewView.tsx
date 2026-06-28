@@ -4,6 +4,7 @@ import { useData } from '../data/DataContext';
 import { useFilter, useReport, useTheme } from '../state/AppStateProvider';
 import { computeKpis } from '../data/kpis';
 import { inVariantRuns, scopeRuns } from '../data/filters';
+import { taskLabel } from '../data/taskLabel';
 import { conditionColor } from '../theme';
 import { EChart } from '../components/EChart';
 import { matrixData } from '../charts/matrix';
@@ -47,7 +48,7 @@ export function OverviewView() {
       </div>
       <div className="overview-grid">
         <Card elevation={Elevation.ZERO} className="panel-card">
-          <h2 className="panel-title">{data.manifest.task_meta[tasks[0]]?.title ?? variant.title}</h2>
+          <h2 className="panel-title">{variant.title}</h2>
           <p className="panel-lede" dangerouslySetInnerHTML={{ __html: variant.lede }} />
           <ul className="strategy-legend">
             {variant.conditions.map((c) => (
@@ -59,6 +60,31 @@ export function OverviewView() {
           <h2 className="panel-title">Experiment matrix</h2>
           <EChart className="chart" themeMode={mode} option={matrixOption(matrix)} />
         </Card>
+      </div>
+      <div className="task-briefs">
+        {variant.tasks.map((task) => {
+          const meta = data.manifest.task_meta[task];
+          const prompt = data.manifest.task_prompts?.[task] ?? '';
+          return (
+            <Card elevation={Elevation.ZERO} className="panel-card task-brief" key={task}>
+              <div className="task-brief-head">
+                <span className="task-brief-eyebrow">{taskLabel(task)}</span>
+                <h3 className="panel-title">{meta?.title ?? task}</h3>
+              </div>
+              <p className="panel-lede">{meta?.measures ?? ''}</p>
+              {prompt ? (
+                <details className="task-prompt">
+                  <summary>
+                    Prompt <span className="task-prompt-src">experiment/tasks/{task}/prompt.md</span>
+                  </summary>
+                  <pre>{prompt}</pre>
+                </details>
+              ) : (
+                <p className="task-prompt-empty">Full prompt spec not committed for this task.</p>
+              )}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

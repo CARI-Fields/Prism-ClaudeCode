@@ -36,6 +36,7 @@ export interface Manifest {
   variants: Variant[];
   strategy_desc: Record<string, string>;
   task_meta: Record<string, { title: string; measures: string }>;
+  task_prompts?: Record<string, string>;
   available: { task: string; condition: string; runs: number }[];
 }
 
