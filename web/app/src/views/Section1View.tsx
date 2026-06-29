@@ -50,6 +50,7 @@ export function Section1View() {
         <div className="panel-head"><h2 className="panel-title">Condition comparison</h2>
           <HTMLSelect value={metric} onChange={(e) => setMetric(e.currentTarget.value)} aria-label="metric">
             {METRICS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</HTMLSelect></div>
+        <p className="panel-sub">Mean of the selected metric for each feature, one bar series per task.</p>
         <EChart className="chart" themeMode={mode} option={conditionOption(metrics, conds, tasks, metric, metricLabel)} />
       </Card>
       {hasBaseline && (
@@ -57,11 +58,13 @@ export function Section1View() {
           <div className="panel-head"><h2 className="panel-title">Overhead vs single agent</h2>
             <HTMLSelect value={overhead} onChange={(e) => setOverhead(e.currentTarget.value)} aria-label="resource">
               {OVERHEADS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</HTMLSelect></div>
+          <p className="panel-sub">Each feature's resource use as a multiple of the single-agent baseline (the 1× line).</p>
           <EChart className="chart" themeMode={mode} option={overheadOption(overheads, conds, tasks, overhead, overheadLabel)} />
         </Card>
       )}
       <Card elevation={Elevation.ZERO} className="panel-card">
         <h2 className="panel-title">Quality vs cost map</h2>
+        <p className="panel-sub">Each point is one feature's mean on the first task in scope; bubble size is request count. Up = higher quality, left = cheaper — the top-left is the sweet spot.</p>
         <EChart className="chart" themeMode={mode} option={efficiencyOption(metrics, conds, tasks[0] ?? '')} />
       </Card>
     </div>

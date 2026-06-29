@@ -27,7 +27,8 @@ export function Section2View() {
   return (
     <div className="view view-stack">
       <Card elevation={Elevation.ZERO} className="panel-card">
-        <h2 className="panel-title">Prefix Cache Hit Rate (accumulated)</h2>
+        <h2 className="panel-title">Prefix cache hit rate (accumulated)</h2>
+        <p className="panel-sub">Cumulative share of input tokens served from the prefix cache as a run progresses, averaged across rollouts.</p>
         {tasks.map((task) => (
           <div key={task}>
             <h3 className="cache-sub">{taskLabel(task)}</h3>
@@ -37,6 +38,7 @@ export function Section2View() {
       </Card>
       <Card elevation={Elevation.ZERO} className="panel-card">
         <h2 className="panel-title">Prefix cache hit rate vs context length</h2>
+        <p className="panel-sub">Per-request hit rate against prompt size — each dot is one request. Larger contexts tend to reuse more cache.</p>
         <EChart className="chart" themeMode={mode} option={latencyOption(turns, conds)} />
       </Card>
     </div>

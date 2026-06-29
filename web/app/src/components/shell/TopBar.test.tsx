@@ -17,9 +17,8 @@ describe('TopBar', () => {
     render(<AppStateProvider manifest={manifest}><TopBar manifest={manifest} /><Mode /></AppStateProvider>);
     expect(screen.getByRole('tab', { name: 'Report One' })).toBeInTheDocument();
     expect(screen.getByText('mode:light')).toBeInTheDocument();
-    // Blueprint <Switch> renders <input type="checkbox"> (role="checkbox"), not role="switch".
-    // We add aria-label="Toggle dark theme" to the Switch for stable querying.
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Toggle dark theme' }));
+    // The theme toggle is a minimal icon button whose aria-label names the action.
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
     expect(screen.getByText('mode:dark')).toBeInTheDocument();
   });
 });

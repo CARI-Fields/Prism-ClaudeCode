@@ -11,7 +11,7 @@ vi.mock('../data/DataContext', () => ({ useData: () => ({ data: { manifest, runs
 describe('Section2View', () => {
   it('renders the distribution panels', () => {
     render(<AppStateProvider manifest={manifest}><Section2View /></AppStateProvider>);
-    expect(screen.getByText(/Prefix Cache Hit Rate/)).toBeInTheDocument();
+    expect(screen.getByText(/Prefix cache hit rate \(accumulated\)/)).toBeInTheDocument();
     expect(screen.getAllByTestId('chart')).toHaveLength(2);
   });
 });

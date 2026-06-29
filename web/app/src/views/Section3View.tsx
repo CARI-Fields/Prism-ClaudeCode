@@ -91,13 +91,13 @@ export function Section3View() {
               </h2>
               <span className="run-tag">{run.run_id}</span>
             </div>
-            <h3 className="cache-sub">Per-Run Request Cost Timeline</h3>
+            <h3 className="cache-sub">Per-run request cost timeline</h3>
             <EChart
               className="chart"
               themeMode={mode}
               option={costTimelineOption(rowsForRun, ordered, barMaxWidth, barCategoryGap)}
             />
-            <h3 className="cache-sub">Context Source Breakdown</h3>
+            <h3 className="cache-sub">Context source breakdown</h3>
             <EChart
               className="chart tall"
               themeMode={mode}
