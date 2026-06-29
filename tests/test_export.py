@@ -24,6 +24,11 @@ def data_dir(tmp_path, monkeypatch):
                   "text": ["hi", "yo"], "truncated": [False, False],
                   "bytes": [2, 2], "stable": [True, True]}
                  ).to_parquet(tmp_path / "component_texts.parquet")
+    pd.DataFrame({"run_id": ["r1", "r2"], "request_index": [0, 0],
+                  "component": ["base system prompt", "base system prompt"],
+                  "text": ["hi", "yo"], "truncated": [False, False],
+                  "bytes": [2, 2], "stable": [True, True]}
+                 ).to_parquet(tmp_path / "component_texts_full.parquet")
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
     return tmp_path
 
@@ -118,3 +123,36 @@ def test_export_texts_flag(client):
 def test_export_empty_selection_400(client):
     assert client.get("/api/export", params={"runs": "bogus"}, headers=AUTH).status_code == 400
     assert client.get("/api/export", params={"runs": ""}, headers=AUTH).status_code == 400
+
+
+def test_texts_jsonl_reads_full_file_and_errors_when_missing(data_dir):
+    from web.api import export
+    rows = [json.loads(l) for l in export.texts_jsonl("r1").splitlines()]
+    assert rows[0]["text"] == "hi"
+    (data_dir / "component_texts_full.parquet").unlink()
+    with pytest.raises(FileNotFoundError):
+        export.texts_jsonl("r1")
+
+
+def test_export_texts_triggers_lazy_full_fetch(client, monkeypatch):
+    import web.api.app as appmod
+    called = []
+    monkeypatch.setattr(appmod, "ensure_full_texts", lambda: called.append(True))
+    r = client.get("/api/export", params={"runs": "r1", "texts": 1}, headers=AUTH)
+    assert r.status_code == 200
+    assert called == [True]
+
+
+def test_export_without_texts_skips_full_fetch(client, monkeypatch):
+    import web.api.app as appmod
+    called = []
+    monkeypatch.setattr(appmod, "ensure_full_texts", lambda: called.append(True))
+    r = client.get("/api/export", params={"runs": "r1", "texts": 0}, headers=AUTH)
+    assert r.status_code == 200
+    assert called == []
+
+
+def test_export_texts_missing_full_file_returns_503(client, data_dir):
+    (data_dir / "component_texts_full.parquet").unlink()
+    r = client.get("/api/export", params={"runs": "r1", "texts": 1}, headers=AUTH)
+    assert r.status_code == 503

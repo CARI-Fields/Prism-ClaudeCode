@@ -65,8 +65,9 @@ export function RunPicker() {
         <Switch
           checked={includeTexts}
           onChange={(e) => setIncludeTexts(e.currentTarget.checked)}
-          label="Include raw context text"
-          aria-label="Include raw context text"
+          label="Include raw context text (full)"
+          aria-label="Include raw context text (full)"
+          title="Full, untruncated request text for the selected runs — can be a large download"
         />
       </div>
       <div className="run-picker-list">

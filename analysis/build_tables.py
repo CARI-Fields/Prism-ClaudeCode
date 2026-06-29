@@ -46,6 +46,7 @@ def build_run(run_dir: Path):
     turns = enrich_turn_costs(turns, meta.get("model"))
     comps = tap_components(tap)
     comp_texts = tap_component_texts(tap)
+    comp_texts_full = tap_component_texts(tap, max_chars=None)
     run_id = run_dir.name
     stamp = {"run_id": run_id, "task": meta.get("task"),
              "condition": meta.get("condition"), "rep": meta.get("rep")}
@@ -54,6 +55,8 @@ def build_run(run_dir: Path):
     for c in comps:
         c.update(stamp)
     for x in comp_texts:
+        x.update(stamp)
+    for x in comp_texts_full:
         x.update(stamp)
     summary = run_summary(meta, run_dir)
     summary["run_id"] = run_id
@@ -71,7 +74,7 @@ def build_run(run_dir: Path):
     if summary.get("task") == "research":
         summary.update(score_research_report(run_dir / "workspace" / "report.md"))
     summary.update(_quality_summary(summary))
-    return turns, comps, summary, comp_texts
+    return turns, comps, summary, comp_texts, comp_texts_full
 
 
 def _quality_summary(summary: dict) -> dict:
@@ -123,21 +126,23 @@ def build_all(raw_dir: Path, out_dir: Path) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     if not raw_dir.exists():
         return {"turns": 0, "components": 0, "runs": 0}
-    all_turns, all_comps, all_runs, all_texts = [], [], [], []
+    all_turns, all_comps, all_runs, all_texts, all_texts_full = [], [], [], [], []
     for d in sorted(raw_dir.iterdir()):
         if not (d / "run_meta.json").exists():
             continue
         try:
-            t, c, r, x = build_run(d)
+            t, c, r, x, xf = build_run(d)
         except Exception as exc:
             print(f"skip {d.name}: {exc}")
             continue
-        all_turns += t; all_comps += c; all_runs.append(r); all_texts += x
+        all_turns += t; all_comps += c; all_runs.append(r); all_texts += x; all_texts_full += xf
     if not all_runs:
         return {"turns": 0, "components": 0, "runs": 0}
     pd.DataFrame(all_turns).to_parquet(out_dir / "turns.parquet")
     pd.DataFrame(all_comps).to_parquet(out_dir / "components.parquet")
     pd.DataFrame(all_runs).to_parquet(out_dir / "runs.parquet")
     pd.DataFrame(all_texts).to_parquet(out_dir / "component_texts.parquet")
+    pd.DataFrame(all_texts_full).to_parquet(out_dir / "component_texts_full.parquet")
     return {"turns": len(all_turns), "components": len(all_comps),
-            "runs": len(all_runs), "component_texts": len(all_texts)}
+            "runs": len(all_runs), "component_texts": len(all_texts),
+            "component_texts_full": len(all_texts_full)}

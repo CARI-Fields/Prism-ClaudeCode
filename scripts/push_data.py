@@ -22,7 +22,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from huggingface_hub import HfApi  # noqa: E402
 
-from web.api.data_source import DATA_FILES  # noqa: E402
+from web.api.data_source import DATA_FILES, FULL_TEXT_FILE  # noqa: E402
+
+UPLOAD_FILES = DATA_FILES + (FULL_TEXT_FILE,)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -33,20 +35,20 @@ def main(argv: list[str] | None = None) -> None:
     if not repo or not token:
         raise SystemExit("set HF_DATASET_REPO and HF_ACCESS_TOKEN")
 
-    missing = [f for f in DATA_FILES if not (data_dir / f).exists()]
+    missing = [f for f in UPLOAD_FILES if not (data_dir / f).exists()]
     if missing:
         raise SystemExit(f"missing {missing} in {data_dir} — run `make analyze` first")
 
     api = HfApi(token=token)
     api.create_repo(repo_id=repo, repo_type="dataset", private=True, exist_ok=True)
-    for name in DATA_FILES:
+    for name in UPLOAD_FILES:
         api.upload_file(
             path_or_fileobj=str(data_dir / name),
             path_in_repo=name,
             repo_id=repo,
             repo_type="dataset",
         )
-    print(f"uploaded {len(DATA_FILES)} files to private dataset {repo}")
+    print(f"uploaded {len(UPLOAD_FILES)} files to private dataset {repo}")
 
 
 if __name__ == "__main__":

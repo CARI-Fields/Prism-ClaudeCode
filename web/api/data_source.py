@@ -16,6 +16,8 @@ from pathlib import Path
 
 from huggingface_hub import hf_hub_download
 
+from web.api.config import get_settings
+
 # The files queries.py reads from DATA_DIR.
 DATA_FILES = (
     "runs.parquet",
@@ -24,6 +26,10 @@ DATA_FILES = (
     "component_texts.parquet",
     "token_rates.json",
 )
+
+# Large, export-only. Deliberately NOT in DATA_FILES: it is pulled lazily on the
+# first text-export (see ensure_full_texts), not at startup.
+FULL_TEXT_FILE = "component_texts_full.parquet"
 
 
 def _hf_download(repo: str, filename: str, token: str, dest: Path) -> None:
@@ -50,3 +56,21 @@ def ensure_data(data_dir, repo: str = "", token: str = "", files=DATA_FILES, _do
     for name in files:
         download(repo=repo, filename=name, token=token, dest=data_dir / name)
     return data_dir
+
+
+def ensure_full_texts(_download=None) -> Path:
+    """Pull the large full-text parquet on demand (export path only).
+
+    Skips the fetch entirely when the file is already present in data_dir, so a
+    once-cached file keeps the export working through transient HF outages. Also
+    a no-op when no dataset repo is configured (local dev relies on the file
+    already being present from `make analyze`). `_download` is injectable for
+    tests."""
+    s = get_settings()
+    data_dir = Path(s.data_dir)
+    if (data_dir / FULL_TEXT_FILE).exists():
+        return data_dir
+    return ensure_data(
+        s.data_dir, s.hf_dataset_repo, s.hf_token,
+        files=(FULL_TEXT_FILE,), _download=_download,
+    )
