@@ -23,6 +23,9 @@ cp "$ROOT/web/api/requirements.txt" "$DEST/requirements.txt"
 # API code (importable as web.api).
 cp "$ROOT/web/__init__.py" "$DEST/web/__init__.py"
 find "$ROOT/web/api" -maxdepth 1 -name '*.py' -exec cp {} "$DEST/web/api/" \;
+# requirements.txt must also live under web/api/ — the Dockerfile's first layer
+# is `COPY web/api/requirements.txt ./requirements.txt` (then `COPY web/api/`).
+cp "$ROOT/web/api/requirements.txt" "$DEST/web/api/requirements.txt"
 
 # Analysis helpers the API imports (report_variants powers /api/manifest).
 cp "$ROOT/analysis/__init__.py"        "$DEST/analysis/__init__.py"

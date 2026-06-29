@@ -13,6 +13,7 @@ def test_stage_space_builds_clean_context(tmp_path):
     must_exist = [
         "Dockerfile", "README.md", "requirements.txt",
         "web/__init__.py", "web/api/app.py", "web/api/export.py", "web/api/queries.py",
+        "web/api/requirements.txt",
         "analysis/__init__.py", "analysis/report_variants.py",
         "experiment/tasks/coding/prompt.md", "experiment/tasks/research/prompt.md",
         "experiment/tasks/coding_longhorizon/prompt.md",

@@ -172,7 +172,7 @@ bash "$REPO_ROOT/scripts/stage_space.sh" "$SPACE_DIR"
 
 Leave step 1 (`push_data.py`) and step 3 (`cd "$SPACE_DIR"; git add -A; git commit ...; git push ...`) unchanged.
 
-> Behavior note: the old block also rsynced `web/api/` wholesale into `$SPACE_DIR/web/api/`, which left duplicate `Dockerfile`/`README.md`/`requirements.txt` *inside* `web/api/`. The stager places those three only at the Space root (where HF needs them). The next manual deploy will therefore show those three duplicates removed from `web/api/` — an intended, benign cleanup; the Space build is unaffected (the root copies are what HF uses, and `COPY web/api/` still includes all the `.py` code).
+> Behavior note: the stager places `Dockerfile` and `README.md` at the Space root (where HF reads them) and keeps `requirements.txt` under `web/api/` (where the Dockerfile's first `COPY` layer needs it). The only intentional change vs the old rsync is that `Dockerfile` and `README.md` are no longer duplicated inside `web/api/`.
 
 - [ ] **Step 2: Verify the script is still valid and uses the stager**
 
