@@ -9,6 +9,7 @@ from pathlib import Path
 import duckdb
 
 from web.api.config import get_settings
+from web.api.data_source import FULL_TEXT_FILE
 from web.api.queries import _clean
 
 _README = """# CC experiment trace export
@@ -19,7 +20,9 @@ Each selected run has one file under `runs/`:
   `request_index`, with that request's context-source breakdown nested under
   `components` (`{component, est_tokens, bytes}`).
 - `runs/<run_id>.texts.jsonl` — present only when raw text was requested; one
-  JSON object per captured context part (`component_texts`).
+  JSON object per captured context part with the FULL, untruncated `text`
+  (`component_texts_full`). Static parts (system prompt, tool definitions) appear
+  once per run (`stable: true`); volatile parts (messages, tool results) per request.
 
 `manifest.json` lists the included runs and the export options.
 
@@ -84,8 +87,14 @@ def run_jsonl(run_id: str) -> str:
 
 
 def texts_jsonl(run_id: str) -> str:
+    path = _parquet(FULL_TEXT_FILE)
+    if not Path(path).exists():
+        raise FileNotFoundError(
+            "component_texts_full.parquet not present — run `make analyze` "
+            "locally or configure HF_DATASET_REPO so the Space can fetch it"
+        )
     rows = _rows(
-        f"SELECT * FROM read_parquet('{_parquet('component_texts.parquet')}') "
+        f"SELECT * FROM read_parquet('{path}') "
         f"WHERE run_id = ? ORDER BY request_index",
         [run_id],
     )

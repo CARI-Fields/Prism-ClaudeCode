@@ -24,6 +24,11 @@ def data_dir(tmp_path, monkeypatch):
                   "text": ["hi", "yo"], "truncated": [False, False],
                   "bytes": [2, 2], "stable": [True, True]}
                  ).to_parquet(tmp_path / "component_texts.parquet")
+    pd.DataFrame({"run_id": ["r1", "r2"], "request_index": [0, 0],
+                  "component": ["base system prompt", "base system prompt"],
+                  "text": ["hi", "yo"], "truncated": [False, False],
+                  "bytes": [2, 2], "stable": [True, True]}
+                 ).to_parquet(tmp_path / "component_texts_full.parquet")
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
     return tmp_path
 
@@ -118,3 +123,12 @@ def test_export_texts_flag(client):
 def test_export_empty_selection_400(client):
     assert client.get("/api/export", params={"runs": "bogus"}, headers=AUTH).status_code == 400
     assert client.get("/api/export", params={"runs": ""}, headers=AUTH).status_code == 400
+
+
+def test_texts_jsonl_reads_full_file_and_errors_when_missing(data_dir):
+    from web.api import export
+    rows = [json.loads(l) for l in export.texts_jsonl("r1").splitlines()]
+    assert rows[0]["text"] == "hi"
+    (data_dir / "component_texts_full.parquet").unlink()
+    with pytest.raises(FileNotFoundError):
+        export.texts_jsonl("r1")
