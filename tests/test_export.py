@@ -132,3 +132,26 @@ def test_texts_jsonl_reads_full_file_and_errors_when_missing(data_dir):
     (data_dir / "component_texts_full.parquet").unlink()
     with pytest.raises(FileNotFoundError):
         export.texts_jsonl("r1")
+
+
+def test_export_texts_triggers_lazy_full_fetch(client, monkeypatch):
+    import web.api.app as appmod
+    called = []
+    monkeypatch.setattr(appmod, "ensure_full_texts", lambda: called.append(True))
+    r = client.get("/api/export", params={"runs": "r1", "texts": 1}, headers=AUTH)
+    assert r.status_code == 200
+    assert called == [True]
+
+
+def test_export_without_texts_skips_full_fetch(client, monkeypatch):
+    import web.api.app as appmod
+    called = []
+    monkeypatch.setattr(appmod, "ensure_full_texts", lambda: called.append(True))
+    client.get("/api/export", params={"runs": "r1", "texts": 0}, headers=AUTH)
+    assert called == []
+
+
+def test_export_texts_missing_full_file_returns_503(client, data_dir):
+    (data_dir / "component_texts_full.parquet").unlink()
+    r = client.get("/api/export", params={"runs": "r1", "texts": 1}, headers=AUTH)
+    assert r.status_code == 503
