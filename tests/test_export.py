@@ -147,7 +147,8 @@ def test_export_without_texts_skips_full_fetch(client, monkeypatch):
     import web.api.app as appmod
     called = []
     monkeypatch.setattr(appmod, "ensure_full_texts", lambda: called.append(True))
-    client.get("/api/export", params={"runs": "r1", "texts": 0}, headers=AUTH)
+    r = client.get("/api/export", params={"runs": "r1", "texts": 0}, headers=AUTH)
+    assert r.status_code == 200
     assert called == []
 
 

@@ -1,5 +1,6 @@
 import importlib.util
-from pathlib import Path
+
+import pytest
 
 
 def _load_push_data():
@@ -38,7 +39,6 @@ def test_push_uploads_data_files_plus_full_text(monkeypatch, tmp_path):
 
 
 def test_push_errors_when_full_text_missing(monkeypatch, tmp_path):
-    import pytest
     from web.api.data_source import DATA_FILES
     pd_mod = _load_push_data()
     for f in DATA_FILES:  # full-text file deliberately absent

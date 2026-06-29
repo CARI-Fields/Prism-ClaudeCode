@@ -128,3 +128,14 @@ def test_ensure_full_texts_noop_without_repo(monkeypatch, tmp_path):
     calls = []
     ds.ensure_full_texts(_download=lambda **k: calls.append(k))
     assert calls == []
+
+
+def test_ensure_full_texts_skips_fetch_when_already_present(monkeypatch, tmp_path):
+    import web.api.data_source as ds
+    monkeypatch.setenv("HF_DATASET_REPO", "acme/ds")
+    monkeypatch.setenv("HF_ACCESS_TOKEN", "tok")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    (tmp_path / ds.FULL_TEXT_FILE).write_text("cached")
+    calls = []
+    ds.ensure_full_texts(_download=lambda **k: calls.append(k))
+    assert calls == []
