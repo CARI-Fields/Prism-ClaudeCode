@@ -20,16 +20,9 @@ PY="${PY:-$REPO_ROOT/.venv/bin/python}"
 # 1. Push the processed parquet to the PRIVATE dataset (NOT into the Space).
 "$PY" "$REPO_ROOT/scripts/push_data.py" "$REPO_ROOT/analysis/data/processed"
 
-# 2. Sync ONLY code into the Space clone (mirrors the repo layout: web/api + analysis helpers).
-rsync -a --delete "$REPO_ROOT/web/api/" "$SPACE_DIR/web/api/"
-cp "$REPO_ROOT/web/__init__.py" "$SPACE_DIR/web/__init__.py"   # package marker so `web.api` imports
-mkdir -p "$SPACE_DIR/analysis"
-cp "$REPO_ROOT/analysis/__init__.py"        "$SPACE_DIR/analysis/__init__.py"
-cp "$REPO_ROOT/analysis/report_variants.py" "$SPACE_DIR/analysis/report_variants.py"
-# HF Space expects Dockerfile + README.md + requirements.txt at the repo root.
-cp "$REPO_ROOT/web/api/Dockerfile"    "$SPACE_DIR/Dockerfile"
-cp "$REPO_ROOT/web/api/README.md"     "$SPACE_DIR/README.md"
-cp "$REPO_ROOT/web/api/requirements.txt" "$SPACE_DIR/requirements.txt"
+# 2. Sync ONLY code into the Space clone (shared with the CI workflow — the file
+#    list lives in stage_space.sh so the two deploy paths never drift).
+bash "$REPO_ROOT/scripts/stage_space.sh" "$SPACE_DIR"
 
 cd "$SPACE_DIR"
 git add -A
