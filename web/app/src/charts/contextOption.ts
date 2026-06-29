@@ -1,5 +1,5 @@
 import type { EChartsOption } from 'echarts';
-import { baseTextStyle, TOOLTIP, valueAxis, yName, bottomLegend } from './echartsTheme';
+import { baseTextStyle, TOOLTIP, valueAxis, axisLabelStyle, yName, bottomLegend } from './echartsTheme';
 import { groupedXAxis, type Ordered } from './ordered';
 import type { Breakdown } from './contextBreakdown';
 
@@ -10,7 +10,11 @@ export function contextOption(
   hitData: (number | null)[],
   barMaxWidth?: number,
   barCategoryGap: string = '20%',
+  dark: boolean = false,
 ): EChartsOption {
+  // The cache-hit overlay is deliberately monochrome (theme ink) so it never
+  // reads as one of the constant context-source data hues.
+  const hitInk = dark ? '#e6ecf4' : '#0d1320';
   // Stack so the "head" of the context window (the stable prefix — system prompt,
   // tools …) reads at the TOP of each bar and the last-appended context (messages /
   // conversation) at the bottom. ECharts draws the first stacked series at the
@@ -32,16 +36,16 @@ export function contextOption(
     ? [
         ...barSeries,
         {
-          name: 'prefix cache hit rate',
+          name: 'cache hit',
           type: 'line',
           xAxisIndex: 0,
           yAxisIndex: 1,
           data: hitData,
           connectNulls: true,
-          symbol: 'circle',
-          symbolSize: 4,
-          lineStyle: { color: '#f03e3e', width: 2 },
-          itemStyle: { color: '#f03e3e' },
+          smooth: true,
+          showSymbol: false,
+          lineStyle: { color: hitInk, width: 2 },
+          itemStyle: { color: hitInk },
           z: 12,
         },
       ]
@@ -49,15 +53,15 @@ export function contextOption(
 
   const yAxis = showHit
     ? [
-        valueAxis({ ...yName('context length (tokens)', 58), min: 0 }),
-        valueAxis({ min: 0, max: 100, inverse: true, splitLine: { show: false } }),
+        valueAxis({ ...yName('tokens', 58), min: 0 }),
+        valueAxis({ min: 0, max: 100, inverse: true, splitLine: { show: false }, axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` } }),
       ]
-    : [valueAxis({ ...yName('context length (tokens)', 58), min: 0 })];
+    : [valueAxis({ ...yName('tokens', 58), min: 0 })];
 
   return {
     textStyle: baseTextStyle(),
     tooltip: { ...TOOLTIP, trigger: 'axis' },
-    legend: bottomLegend(showHit ? bd.buckets.concat(['prefix cache hit rate']) : bd.buckets),
+    legend: bottomLegend(showHit ? bd.buckets.concat(['cache hit']) : bd.buckets),
     grid: { left: 74, right: showHit ? 60 : 24, top: 48, bottom: 66 },
     xAxis: groupedXAxis(o),
     yAxis,

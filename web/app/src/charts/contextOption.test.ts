@@ -18,7 +18,7 @@ describe('contextOption', () => {
     expect(Array.isArray(noHit.yAxis) ? noHit.yAxis.length : 1).toBe(1);
 
     const withHit = contextOption(bd, o, true, hitRateData(rows, o)) as any;
-    const hit = withHit.series.find((s: any) => s.name === 'prefix cache hit rate');
+    const hit = withHit.series.find((s: any) => s.name === 'cache hit');
     expect(hit.type).toBe('line');
     expect(hit.yAxisIndex).toBe(1);
     expect(withHit.yAxis[1].inverse).toBe(true);

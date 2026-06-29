@@ -6,7 +6,7 @@ export function ExportControl() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button minimal icon="download" aria-label="Export traces" onClick={() => setOpen(true)} />
+      <Button minimal text="Export" aria-label="Export traces" onClick={() => setOpen(true)} />
       <Dialog
         isOpen={open}
         onClose={() => setOpen(false)}

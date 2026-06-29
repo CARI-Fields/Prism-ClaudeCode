@@ -13,6 +13,7 @@ describe('Section1View', () => {
   it('renders comparison + overhead + efficiency panels, with no Experiment matrix (that lives in Overview)', () => {
     render(<AppStateProvider manifest={manifest}><Section1View /></AppStateProvider>);
     expect(screen.queryByText('Experiment matrix')).not.toBeInTheDocument();
+    expect(screen.getByText('Runs')).toBeInTheDocument(); // KPI strip now leads §1
     expect(screen.getByText('Condition comparison')).toBeInTheDocument();
     expect(screen.getByText('Overhead vs single agent')).toBeInTheDocument();
     expect(screen.getByText('Quality vs cost map')).toBeInTheDocument();

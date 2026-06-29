@@ -25,9 +25,9 @@ export function yName(name: string, gap: number) {
 }
 export function rightLegend(items: string[]) {
   return { type: 'scroll', orient: 'vertical', right: 6, top: 'middle', icon: 'roundRect',
-    itemWidth: 14, itemHeight: 9, itemGap: 9, data: items, textStyle: { fontFamily: MONO, fontSize: 11 } };
+    itemWidth: 12, itemHeight: 8, itemGap: 12, data: items, textStyle: { fontFamily: MONO, fontSize: 11 } };
 }
 export function bottomLegend(items: string[]) {
-  return { type: 'scroll', bottom: 0, icon: 'roundRect', itemWidth: 14, itemHeight: 9, data: items,
+  return { type: 'scroll', bottom: 0, icon: 'roundRect', itemWidth: 12, itemHeight: 8, itemGap: 12, data: items,
     textStyle: { fontFamily: MONO, fontSize: 11 } };
 }

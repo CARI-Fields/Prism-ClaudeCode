@@ -362,6 +362,9 @@ body {
   text-transform: uppercase;
   letter-spacing: .11em;
   color: var(--app-muted);
+  /* reserve two label lines (2 × 15px line-height) so every KPI value starts on
+     the same baseline, regardless of whether its label wraps — keeps rhythm */
+  min-height: 30px;
 }
 .kpi-value {
   font-family: var(--app-mono);
@@ -372,6 +375,14 @@ body {
   margin-top: 8px;
   color: var(--app-ink);
   font-variant-numeric: tabular-nums;
+}
+.kpi-sub {
+  font-family: var(--app-mono);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+  margin-top: 6px;
 }
 
 /* ============================================================================
