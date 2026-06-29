@@ -118,6 +118,17 @@ body {
 }
 .app-topbar .bp5-navbar-divider { border-color: var(--app-line); }
 
+/* square minimal icon buttons (theme toggle + reload) — single tidy control,
+   sit flush as a pair after the trailing divider */
+.app-topbar .bp5-align-right { gap: 2px; }
+.app-topbar .topbar-icon-btn { min-width: 30px; padding: 0 7px; }
+.app-topbar .topbar-icon-btn .bp5-button-text {
+  font-size: 15px;
+  line-height: 1;
+  color: var(--app-muted);
+}
+.app-topbar .topbar-icon-btn:hover .bp5-button-text { color: var(--app-ink); }
+
 /* ============================================================================
    Tabs — variant switch (top bar) + view nav (canvas). Mono labels, accent rule.
    ========================================================================== */
@@ -144,34 +155,52 @@ body {
   z-index: 1;
 }
 .topbar-variants .bp5-tab-list {
+  position: relative;
   display: flex;
-  gap: 3px;
+  gap: 0;
   background: var(--app-panel-2);
   border: 1px solid var(--app-line);
-  border-radius: var(--app-radius);
+  border-radius: 999px;
   padding: 3px;
 }
-/* equal-width segments read as a deliberate control, not two stray tabs */
+/* a single capsule thumb glides between the equal-width segments. Its width and
+   horizontal offset are set inline (per segment count + active index) so the
+   control generalizes past two reports; CSS owns the look and the easing. */
+.topbar-variants .seg-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: var(--app-elevated);
+  box-shadow: var(--app-elevated-shadow);
+  transition: transform .26s cubic-bezier(.45, 0, .15, 1);
+  z-index: 0;
+  pointer-events: none;
+}
 .topbar-variants .bp5-tab {
+  position: relative;
+  z-index: 1;
   flex: 1 1 0;
-  min-width: 168px;
+  min-width: 116px;
   text-align: center;
   font-size: 12.5px;
-  padding: 5px 16px;
-  border-radius: var(--app-radius-sm);
+  padding: 4px 16px;
+  border-radius: 999px;
   color: var(--app-muted);
-  transition: background-color .12s ease, color .12s ease, box-shadow .12s ease;
+  transition: color .18s ease;
 }
 .topbar-variants .bp5-tab:hover { color: var(--app-ink); }
-/* the active segment lifts off the inset track as a raised thumb */
 .topbar-variants .bp5-tab[aria-selected="true"] {
   color: var(--app-accent-2);
   font-weight: 600;
-  background: var(--app-elevated);
-  box-shadow: var(--app-elevated-shadow);
 }
 .topbar-variants .bp5-tab[aria-selected="true"]:hover { color: var(--app-accent-2); }
 .topbar-variants .bp5-tab-indicator { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .topbar-variants .seg-thumb { transition: none; }
+}
 
 /* View nav: make the active section read as a clear, prominent selection. */
 .view-nav.bp5-tabs .bp5-tab {
@@ -291,8 +320,36 @@ body {
 .panel-card { min-width: 0; padding: 15px 17px 17px; }
 .panel-title { font-size: 15px; font-weight: 600; letter-spacing: -.005em; margin: 0 0 10px; color: var(--app-ink); }
 .panel-lede { margin: 0 0 12px; color: var(--app-muted); font-size: 14px; line-height: 1.55; }
+/* one-line "what am I looking at" caption under a chart title */
+.panel-sub {
+  margin: -4px 0 14px;
+  color: var(--app-muted);
+  font-family: var(--app-sans);
+  font-size: 12.5px;
+  line-height: 1.5;
+  max-width: 64ch;
+  text-wrap: pretty;
+}
+.panel-head + .panel-sub { margin-top: 0; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; margin-bottom: 6px; }
 .panel-head .panel-title { margin: 0; }
+
+/* scope summary — what slice of the data the §1–§3 canvas is currently showing */
+.scope-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: -2px 0 18px;
+  font-family: var(--app-mono);
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: var(--app-muted);
+}
+.scope-note .scope-strong { color: var(--app-ink); font-weight: 600; }
+.scope-note .scope-sep { opacity: .45; }
+.scope-note .scope-reset { color: var(--app-accent-2); cursor: pointer; }
+.scope-note .scope-reset:hover { text-decoration: underline; }
 
 /* ============================================================================
    KPI row — the hero readout. Big mono numerals, tabular figures.
@@ -379,7 +436,8 @@ body {
   font-size: 14px;
   line-height: 1.5;
 }
-.strategy-legend li .rail-dot { align-self: center; }
+/* marker references the START of its label (first line), not the block centroid */
+.strategy-legend li .rail-dot { align-self: baseline; position: relative; top: 1px; }
 .strategy-legend li b {
   font-family: var(--app-mono);
   font-size: 13px;

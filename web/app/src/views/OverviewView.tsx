@@ -58,6 +58,7 @@ export function OverviewView() {
         </Card>
         <Card elevation={Elevation.ZERO} className="panel-card">
           <h2 className="panel-title">Experiment matrix</h2>
+          <p className="panel-sub">Run status for each task × feature cell — green passed, red failed, grey missing.</p>
           <EChart className="chart" themeMode={mode} option={matrixOption(matrix)} />
         </Card>
       </div>
