@@ -26,6 +26,12 @@ cp "$REPO_ROOT/web/__init__.py" "$SPACE_DIR/web/__init__.py"   # package marker 
 mkdir -p "$SPACE_DIR/analysis"
 cp "$REPO_ROOT/analysis/__init__.py"        "$SPACE_DIR/analysis/__init__.py"
 cp "$REPO_ROOT/analysis/report_variants.py" "$SPACE_DIR/analysis/report_variants.py"
+# Task spec files: the manifest serves these, and the Dockerfile COPYs them into
+# the image, so they must be present in the Space build context.
+for t in coding research coding_longhorizon research_longhorizon; do
+  mkdir -p "$SPACE_DIR/experiment/tasks/$t"
+  cp "$REPO_ROOT/experiment/tasks/$t/prompt.md" "$SPACE_DIR/experiment/tasks/$t/prompt.md"
+done
 # HF Space expects Dockerfile + README.md + requirements.txt at the repo root.
 cp "$REPO_ROOT/web/api/Dockerfile"    "$SPACE_DIR/Dockerfile"
 cp "$REPO_ROOT/web/api/README.md"     "$SPACE_DIR/README.md"
