@@ -261,8 +261,9 @@ def _context_source_texts(turn: dict) -> dict[str, list[str]]:
     return parts
 
 
-def tap_component_texts(tap: list, max_chars: int = 800) -> list[dict]:
-    """Per-(request_index, component) real text, truncated to a preview.
+def tap_component_texts(tap: list, max_chars: int | None = 800) -> list[dict]:
+    """Per-(request_index, component) real text. Truncated to a ``max_chars``
+    preview by default; pass ``max_chars=None`` for the full untruncated text.
 
     Components whose joined text is identical across every turn (system prompt,
     tool definitions, CLAUDE.md, ...) are emitted ONCE per run with ``stable=True``
@@ -281,13 +282,13 @@ def tap_component_texts(tap: list, max_chars: int = 800) -> list[dict]:
         stable = len({text for _, _, text in entries}) == 1
         emit = entries[:1] if stable else entries
         for i, request_type, text in emit:
-            preview = text[:max_chars]
+            preview = text if max_chars is None else text[:max_chars]
             rows.append({
                 "request_index": i,
                 "component": comp,
                 "request_type": request_type,
                 "text": preview,
-                "truncated": len(text) > max_chars,
+                "truncated": False if max_chars is None else len(text) > max_chars,
                 "bytes": len(text.encode("utf-8")),
                 "stable": stable,
             })

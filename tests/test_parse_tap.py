@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from analysis.parse.parse_tap import parse_iso, tap_turns, tap_components
+from analysis.parse.parse_tap import parse_iso, tap_turns, tap_components, tap_component_texts
 
 FIX = Path("tests/fixtures/real_cell/tap.json")
 
@@ -241,3 +241,24 @@ def test_tap_components_classify_context_sources():
         "tool results / file reads",
     } <= components
     assert sum(c["est_tokens"] for c in c0) == 150
+
+
+def test_tap_component_texts_full_is_untruncated():
+    long = "x" * 1000
+    tap = [{
+        "timestamp": "2026-06-19T21:02:44.554578+00:00",
+        "duration_ms": 1000,
+        "model": "claude-sonnet-4-6",
+        "system": [{"type": "text", "text": "You are a Claude agent."}],
+        "messages": [{"role": "user", "content": [{"type": "text", "text": long}]}],
+        "response": {"usage": {
+            "input_tokens": 10, "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0, "output_tokens": 5,
+        }},
+    }]
+    preview = {r["component"]: r for r in tap_component_texts(tap)}
+    full = {r["component"]: r for r in tap_component_texts(tap, max_chars=None)}
+    assert preview["user input"]["text"] == long[:800]
+    assert preview["user input"]["truncated"] is True
+    assert full["user input"]["text"] == long
+    assert full["user input"]["truncated"] is False
