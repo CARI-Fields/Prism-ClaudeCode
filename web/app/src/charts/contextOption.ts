@@ -17,10 +17,10 @@ export function contextOption(
   const hitInk = dark ? '#e6ecf4' : '#0d1320';
   // Stack so the "head" of the context window (the stable prefix — system prompt,
   // tools …) reads at the TOP of each bar and the last-appended context (messages /
-  // conversation) at the bottom. ECharts draws the first stacked series at the
-  // bottom, so iterate buckets tail→head. bd.buckets stays head→tail for the legend.
-  const stackBuckets = [...bd.buckets].reverse();
-  const barSeries = stackBuckets.map((b) => ({
+  // conversation) at the bottom. The token axis is inverse (0 at top, growing
+  // downward — matching the design), and with an inverse axis ECharts draws the
+  // first stacked series at the TOP, so iterate buckets head→tail directly.
+  const barSeries = bd.buckets.map((b) => ({
     name: b,
     type: 'bar' as const,
     stack: 'context',
@@ -53,16 +53,16 @@ export function contextOption(
 
   const yAxis = showHit
     ? [
-        valueAxis({ ...yName('tokens', 58), min: 0 }),
+        valueAxis({ ...yName('tokens', 46), min: 0, inverse: true }),
         valueAxis({ min: 0, max: 100, inverse: true, splitLine: { show: false }, axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` } }),
       ]
-    : [valueAxis({ ...yName('tokens', 58), min: 0 })];
+    : [valueAxis({ ...yName('tokens', 46), min: 0, inverse: true })];
 
   return {
     textStyle: baseTextStyle(),
     tooltip: { ...TOOLTIP, trigger: 'axis' },
     legend: bottomLegend(showHit ? bd.buckets.concat(['cache hit']) : bd.buckets),
-    grid: { left: 74, right: showHit ? 60 : 24, top: 48, bottom: 66 },
+    grid: { left: 10, right: showHit ? 44 : 16, top: 26, bottom: 60, containLabel: true },
     xAxis: groupedXAxis(o),
     yAxis,
     series,

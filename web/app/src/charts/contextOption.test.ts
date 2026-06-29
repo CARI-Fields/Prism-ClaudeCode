@@ -32,12 +32,12 @@ describe('contextOption', () => {
     expect(bars.every((s: any) => s.barMaxWidth === 42 && s.barCategoryGap === '12%')).toBe(true);
   });
 
-  it('stacks the context head on top: head bucket is the last bar series, tail is the first', () => {
+  it('stacks the context head on top: head bucket is the first bar series (inverse axis)', () => {
     const bd = breakdownData(COMPOSE_MODES.token, rows, []);
     const bars = (contextOption(bd, o, false, []) as any).series.filter((s: any) => s.type === 'bar');
-    // bd.buckets is head→tail; ECharts draws the first series at the bottom, so the
-    // head bucket must render last (top) and the tail bucket first (bottom).
-    expect(bars[bars.length - 1].name).toBe(bd.buckets[0]);
-    expect(bars[0].name).toBe(bd.buckets[bd.buckets.length - 1]);
+    // bd.buckets is head→tail; the token axis is inverse, so ECharts draws the
+    // first series at the TOP — head bucket first, tail bucket last.
+    expect(bars[0].name).toBe(bd.buckets[0]);
+    expect(bars[bars.length - 1].name).toBe(bd.buckets[bd.buckets.length - 1]);
   });
 });
