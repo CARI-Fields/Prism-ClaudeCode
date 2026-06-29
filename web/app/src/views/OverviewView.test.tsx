@@ -12,9 +12,9 @@ const runs: Run[] = [{ run_id: 'a', task: 'coding', condition: 'goal', rep: 1, s
 vi.mock('../data/DataContext', () => ({ useData: () => ({ data: { manifest, runs, turns: [], components: [] } }) }));
 
 describe('OverviewView', () => {
-  it('renders KPI cards, the strategy legend, and a headline chart', () => {
+  it('renders the strategy legend and a headline chart (KPIs live on §1, not here)', () => {
     render(<AppStateProvider manifest={manifest}><OverviewView /></AppStateProvider>);
-    expect(screen.getByText('Runs')).toBeInTheDocument();
+    expect(screen.queryByText('Runs')).not.toBeInTheDocument();
     expect(screen.getByText('Goal strategy')).toBeInTheDocument();
     expect(screen.getByTestId('chart')).toBeInTheDocument();
   });

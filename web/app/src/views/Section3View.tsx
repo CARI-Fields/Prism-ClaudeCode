@@ -74,7 +74,7 @@ export function Section3View() {
           group,
           AGENT_TYPE_ORDER
         );
-        const barMaxWidth = Math.max(6, Math.round(6 + 74 * (density / 100)));
+        const barMaxWidth = Math.max(4, Math.round(4 + 26 * (density / 100)));
         // Denser bars pack tighter: gap shrinks as the bars widen (and vice-versa).
         const barCategoryGap = `${Math.round(60 - 52 * (density / 100))}%`;
         const bd = breakdownData(
@@ -101,7 +101,7 @@ export function Section3View() {
             <EChart
               className="chart tall"
               themeMode={mode}
-              option={contextOption(bd, ordered, hitrate, hitData, barMaxWidth, barCategoryGap)}
+              option={contextOption(bd, ordered, hitrate, hitData, barMaxWidth, barCategoryGap, mode === 'dark')}
               onClick={
                 mdef.clickable
                   ? (p) => {
