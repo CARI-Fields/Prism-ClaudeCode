@@ -149,3 +149,17 @@ def _markdown_table(df: pd.DataFrame, cols: list[str]) -> str:
             out[col] = out[col].round(4)
     out = out.astype(object).where(pd.notna(out), "")
     return out.to_markdown(index=False)
+
+
+def main() -> None:
+    # `make analyze` entry point: auto-load .env so ANTHROPIC_API_KEY /
+    # CC_COUNT_TOKENS (and HF_ACCESS_TOKEN) are available, then build + report.
+    # Kept out of generate()/build_all so the test suite never reads .env.
+    from analysis.parse.token_counts import load_dotenv
+    load_dotenv(".env")
+    print(generate("analysis/data/raw", "analysis/data/processed",
+                   "analysis/figures", "analysis/reports/report.md"))
+
+
+if __name__ == "__main__":
+    main()

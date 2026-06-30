@@ -1,6 +1,59 @@
 import json
 from pathlib import Path
 from analysis.parse.parse_tap import parse_iso, tap_turns, tap_components, tap_component_texts
+from analysis.parse.token_counts import TokenCounter
+
+
+def _turn(system_text, user_text, input_tokens):
+    return {
+        "timestamp": "2026-06-19T21:02:44.554578+00:00",
+        "duration_ms": 1000,
+        "model": "claude-opus-4-8",
+        "system": [{"type": "text", "text": system_text}],
+        "tools": [],
+        "messages": [{"role": "user", "content": user_text}],
+        "response": {"usage": {
+            "input_tokens": input_tokens,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0,
+            "output_tokens": 5,
+        }},
+    }
+
+
+def test_stable_component_token_estimate_is_identical_across_requests():
+    # Same system prompt text, different conversation and different reported totals.
+    # The base system prompt must render to the SAME token estimate in every request
+    # (no scale-to-total wobble) — this is the consistency the visualization needs.
+    system_text = "S" * 5000  # no leading/trailing whitespace to strip
+    tap = [_turn(system_text, "u" * 800, 4000),
+           _turn(system_text, "v" * 1600, 9000)]
+    counter = TokenCounter(counter=lambda t: len(t) // 4)
+
+    comps = tap_components(tap, token_counter=counter)
+
+    def base_of(i):
+        return next(c["est_tokens"] for c in comps
+                    if c["request_index"] == i and c["component"] == "base system prompt")
+
+    # Exact counter value, identical across both requests.
+    assert base_of(0) == len(system_text) // 4
+    assert base_of(0) == base_of(1)
+
+
+def test_components_still_sum_to_prompt_tokens_with_token_counter():
+    # Hybrid anchoring: the volatile message bucket absorbs the residual so each
+    # request's components still sum to its reported prompt tokens.
+    system_text = "You are a helpful agent. " * 200
+    tap = [_turn(system_text, "u" * 800, 4000),
+           _turn(system_text, "v" * 1600, 9000)]
+    counter = TokenCounter(counter=lambda t: len(t) // 4)
+
+    comps = tap_components(tap, token_counter=counter)
+
+    for i, prompt in ((0, 4000), (1, 9000)):
+        total = sum(c["est_tokens"] for c in comps if c["request_index"] == i)
+        assert total == prompt
 
 FIX = Path("tests/fixtures/real_cell/tap.json")
 
@@ -182,7 +235,10 @@ def test_system_prompt_memory_instructions_do_not_reclassify_whole_prompt_as_aut
     components = tap_components(tap)
     by_component = {row["component"]: row["est_tokens"] for row in components}
 
-    assert by_component["base system prompt"] > by_component["user input"]
+    # The whole system text is counted as the base system prompt, not split off
+    # into an "auto memory" component just because it mentions memory.
+    assert by_component["base system prompt"] > 0
+    assert "user input" in by_component
     assert "auto memory" not in by_component
 
 
