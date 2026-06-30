@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 
 from analysis.parse.tokenizer import scale_to_total
+from analysis.parse.token_counts import TokenCounter
 
 
 BUILTIN_TOOL_NAMES = {
@@ -45,8 +46,6 @@ def _request_type(turn: dict) -> str:
     system_lower = system_text.lower()
     if "security monitor for autonomous ai coding agents" in system_lower:
         return "security-monitor"
-    if "cc_is_subagent=true" not in system_lower:
-        return "main-agent"
 
     tool_names = {
         tool.get("name") for tool in turn.get("tools") or []
@@ -56,6 +55,12 @@ def _request_type(turn: dict) -> str:
         _message_text(message) for message in turn.get("messages") or []
     ).lower()
 
+    # WebSearch / WebFetch (and workflow) sub-requests are spawned by tool use on a
+    # distinct internal path and do NOT carry the cc_is_subagent=true marker, so they
+    # must be detected by their own signatures BEFORE the main-agent fallback. Left to
+    # the marker gate they fall into main-agent, and their small, uncached prompts
+    # interleave with the real main-agent context — turning its monotonically growing
+    # curve into a sawtooth.
     if "workflow orchestration script" in system_lower:
         return "workflow-subagent"
     if "assistant for performing a web search tool use" in system_lower or "web_search" in tool_names:
@@ -64,7 +69,9 @@ def _request_type(turn: dict) -> str:
         return "web-fetch-subagent"
     if "agent for claude code" in system_lower:
         return "task-subagent"
-    return "subagent-internal"
+    if "cc_is_subagent=true" in system_lower:
+        return "subagent-internal"
+    return "main-agent"
 
 
 def tap_turns(tap: list) -> list[dict]:
@@ -202,7 +209,57 @@ def _context_source_bytes(turn: dict) -> dict[str, float]:
     return parts
 
 
-def tap_components(tap: list) -> list[dict]:
+# The cacheable "head" of the context window. These components are byte-stable
+# across a run's requests, so their token estimate must be stable too — they keep
+# their exact per-block count and are never rescaled (see _anchor_to_prompt).
+STABLE_COMPONENTS = {
+    "base system prompt",
+    "builtin tool definitions",
+    "MCP / extension tool definitions",
+    "custom agent definitions",
+    "CLAUDE.md / project instructions",
+    "skills listing",
+    "invoked skill bodies",
+    "auto memory",
+}
+
+
+def _spread(keys: list[str], total: int) -> dict[str, int]:
+    n = len(keys)
+    base, rem = divmod(total, n)
+    return {k: base + (1 if idx < rem else 0) for idx, k in enumerate(keys)}
+
+
+def _anchor_to_prompt(est_raw: dict[str, int], prompt: int) -> dict[str, int]:
+    """Keep the stable-prefix components at their exact token count and let the
+    volatile message / tool-result components absorb the residual, so a request's
+    components still sum to its reported prompt tokens. Falls back to a plain
+    proportional rescale when the stable estimate alone already meets/exceeds the
+    prompt or there is nothing volatile to absorb the difference."""
+    if prompt <= 0 or not est_raw:
+        return {c: 0 for c in est_raw}
+    stable = {c: v for c, v in est_raw.items() if c in STABLE_COMPONENTS}
+    volatile = {c: v for c, v in est_raw.items() if c not in STABLE_COMPONENTS}
+    residual = prompt - sum(stable.values())
+    if volatile and residual > 0:
+        out = {c: int(v) for c, v in stable.items()}
+        if sum(volatile.values()) > 0:
+            out.update(scale_to_total(volatile, residual))
+        else:
+            out.update(_spread(list(volatile), residual))
+        return out
+    return scale_to_total(est_raw, prompt)
+
+
+def tap_components(tap: list, token_counter: TokenCounter | None = None) -> list[dict]:
+    """Per-(request, component) token estimates.
+
+    Each component's tokens come from counting its real text once per unique
+    content hash (``token_counter``), so a byte-identical block renders to the
+    same number in every request. Counts are then anchored to the reported prompt
+    tokens via :func:`_anchor_to_prompt`. Blob-externalized content has no inline
+    text, so it falls back to a byte-ratio estimate."""
+    counter = token_counter if token_counter is not None else TokenCounter()
     rows = []
     for i, turn in enumerate(tap):
         u = _usage(turn)
@@ -210,7 +267,12 @@ def tap_components(tap: list) -> list[dict]:
                   + _cache_creation_tokens(u))
         request_type = _request_type(turn)
         sizes = _context_source_bytes(turn)
-        est = scale_to_total(sizes, prompt)
+        texts = _context_source_texts(turn)
+        est_raw = {}
+        for comp, nbytes in sizes.items():
+            joined = "\n\n".join(texts.get(comp, [])).strip()
+            est_raw[comp] = counter.count(joined) if joined else int(nbytes // 4)
+        est = _anchor_to_prompt(est_raw, prompt)
         for comp in sizes:
             rows.append({"request_index": i, "component": comp,
                          "bytes": int(sizes[comp]), "est_tokens": est[comp],

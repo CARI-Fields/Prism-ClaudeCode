@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
 
 from analysis.parse.parse_tap import (
     tap_turns, tap_components, tap_component_texts, drop_empty_turns,
+)
+from analysis.parse.token_counts import (
+    TokenCounter, make_count_tokens_api, load_token_cache, save_token_cache,
 )
 from analysis.parse.parse_ttft import load_ttft, join_ttft
 from analysis.parse.parse_meta import run_summary
@@ -31,7 +35,7 @@ def cache_summary(turns: list[dict]) -> dict:
     }
 
 
-def build_run(run_dir: Path):
+def build_run(run_dir: Path, token_counter: TokenCounter | None = None):
     run_dir = Path(run_dir)
     meta = json.loads((run_dir / "run_meta.json").read_text())
     tap_files = sorted((run_dir / "tap").glob("*.json"))
@@ -44,7 +48,7 @@ def build_run(run_dir: Path):
     tap = drop_empty_turns(tap)
     turns = join_ttft(tap_turns(tap), load_ttft(run_dir / "ttft" / "ttft.jsonl"))
     turns = enrich_turn_costs(turns, meta.get("model"))
-    comps = tap_components(tap)
+    comps = tap_components(tap, token_counter)
     comp_texts = tap_component_texts(tap)
     comp_texts_full = tap_component_texts(tap, max_chars=None)
     run_id = run_dir.name
@@ -121,17 +125,42 @@ def _number(value) -> float | None:
         return None
 
 
-def build_all(raw_dir: Path, out_dir: Path) -> dict:
+def _first_model(raw_dir: Path) -> str | None:
+    for d in sorted(raw_dir.iterdir()):
+        meta = d / "run_meta.json"
+        if meta.exists():
+            try:
+                return json.loads(meta.read_text()).get("model")
+            except Exception:
+                return None
+    return None
+
+
+def _build_token_counter(raw_dir: Path, out_dir: Path) -> TokenCounter:
+    """Counter for a full build: reuse the persisted hash→token cache, and call
+    the (free) Claude count_tokens endpoint when CC_COUNT_TOKENS is set and a key
+    is available — otherwise fall back to the deterministic byte/char estimate.
+    Counts use one tokenizer for the whole dataset (cross-run consistency)."""
+    cache = load_token_cache(out_dir / "token_cache.json")
+    api = None
+    if os.environ.get("CC_COUNT_TOKENS"):
+        api = make_count_tokens_api(_first_model(raw_dir) or "claude-opus-4-8")
+    return TokenCounter(counter=api, cache=cache)
+
+
+def build_all(raw_dir: Path, out_dir: Path,
+              token_counter: TokenCounter | None = None) -> dict:
     raw_dir, out_dir = Path(raw_dir), Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     if not raw_dir.exists():
         return {"turns": 0, "components": 0, "runs": 0}
+    counter = token_counter if token_counter is not None else _build_token_counter(raw_dir, out_dir)
     all_turns, all_comps, all_runs, all_texts, all_texts_full = [], [], [], [], []
     for d in sorted(raw_dir.iterdir()):
         if not (d / "run_meta.json").exists():
             continue
         try:
-            t, c, r, x, xf = build_run(d)
+            t, c, r, x, xf = build_run(d, token_counter=counter)
         except Exception as exc:
             print(f"skip {d.name}: {exc}")
             continue
@@ -143,6 +172,7 @@ def build_all(raw_dir: Path, out_dir: Path) -> dict:
     pd.DataFrame(all_runs).to_parquet(out_dir / "runs.parquet")
     pd.DataFrame(all_texts).to_parquet(out_dir / "component_texts.parquet")
     pd.DataFrame(all_texts_full).to_parquet(out_dir / "component_texts_full.parquet")
+    save_token_cache(out_dir / "token_cache.json", counter.cache)
     return {"turns": len(all_turns), "components": len(all_comps),
             "runs": len(all_runs), "component_texts": len(all_texts),
             "component_texts_full": len(all_texts_full)}

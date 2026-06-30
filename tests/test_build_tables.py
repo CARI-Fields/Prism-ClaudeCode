@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 from analysis.build_tables import build_run, build_all, cache_summary
 from analysis.parse.parse_tap import drop_empty_turns, tap_turns
+from analysis.parse.token_counts import TokenCounter, load_token_cache
 
 
 def test_drop_empty_turns_removes_aborted_responses_and_reindexes():
@@ -41,6 +42,23 @@ def test_build_run(tmp_path):
     assert run["quality_score"] == 0.0
     assert comp_texts and all({"component", "text", "stable"} <= set(x) for x in comp_texts)
     assert comp_texts_full and all(x["truncated"] is False for x in comp_texts_full)
+
+
+def test_build_run_threads_token_counter(tmp_path):
+    d = _make_run(tmp_path)
+    tc = TokenCounter(counter=lambda t: 1)  # exact count for every unique block
+    _, comps, _, _, _ = build_run(d, token_counter=tc)
+    assert tc.api_calls > 0          # the counter was actually consulted
+    assert len(tc.cache) > 0         # and unique blocks were memoized
+    assert comps                     # components still produced
+
+
+def test_build_all_shares_and_persists_token_cache(tmp_path):
+    _make_run(tmp_path)
+    out = tmp_path / "processed"
+    build_all(tmp_path / "data/raw", out, token_counter=TokenCounter(counter=lambda t: 2))
+    cache = load_token_cache(out / "token_cache.json")
+    assert cache and all(v == 2 for v in cache.values())
 
 
 def test_cache_summary_counts_warm_cache_as_observed():
