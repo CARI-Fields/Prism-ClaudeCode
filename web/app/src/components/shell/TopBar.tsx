@@ -9,7 +9,10 @@ import { ExportControl } from '../../export/ExportControl';
 // non-button segments of the report switch).
 function activate(fn: () => void) {
   return (e: KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fn();
+    }
   };
 }
 
@@ -18,7 +21,10 @@ export function TopBar({ manifest }: { manifest: Manifest }) {
   const { mode, toggle } = useTheme();
   const { reload } = useData();
   const variants = manifest.variants;
-  const activeIdx = Math.max(0, variants.findIndex((v) => v.key === report));
+  const activeIdx = Math.max(
+    0,
+    variants.findIndex((v) => v.key === report),
+  );
   const themeAria = `Switch to ${mode === 'dark' ? 'light' : 'dark'} theme`;
   return (
     <Navbar className="app-topbar">

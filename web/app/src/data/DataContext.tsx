@@ -1,13 +1,29 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ApiError, getComponents, getManifest, getRuns, getTokenRates, getTurns } from '../api/client';
+import {
+  ApiError,
+  getComponents,
+  getManifest,
+  getRuns,
+  getTokenRates,
+  getTurns,
+} from '../api/client';
 import type { Component, Manifest, Run, Turn } from '../types';
 
 export type DataStatus = 'loading' | 'ready' | 'need-token' | 'error';
 export interface DataBundle {
-  manifest: Manifest; runs: Run[]; turns: Turn[]; components: Component[]; tokenRates: Record<string, number>;
+  manifest: Manifest;
+  runs: Run[];
+  turns: Turn[];
+  components: Component[];
+  tokenRates: Record<string, number>;
 }
-interface DataState { status: DataStatus; data: DataBundle | null; error: string | null; reload: () => void; }
+interface DataState {
+  status: DataStatus;
+  data: DataBundle | null;
+  error: string | null;
+  reload: () => void;
+}
 
 const Ctx = createContext<DataState | null>(null);
 export function useData(): DataState {
@@ -22,19 +38,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setStatus('loading'); setError(null);
+    setStatus('loading');
+    setError(null);
     try {
       const [manifest, runs, turns, components, tokenRates] = await Promise.all([
-        getManifest(), getRuns(), getTurns(), getComponents(), getTokenRates(),
+        getManifest(),
+        getRuns(),
+        getTurns(),
+        getComponents(),
+        getTokenRates(),
       ]);
       setData({ manifest, runs, turns, components, tokenRates });
       setStatus('ready');
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setStatus('need-token');
-      else { setError(e instanceof Error ? e.message : String(e)); setStatus('error'); }
+      else {
+        setError(e instanceof Error ? e.message : String(e));
+        setStatus('error');
+      }
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
-  return <Ctx.Provider value={{ status, data, error, reload: () => void load() }}>{children}</Ctx.Provider>;
+  useEffect(() => {
+    void load();
+  }, [load]);
+  return (
+    <Ctx.Provider value={{ status, data, error, reload: () => void load() }}>
+      {children}
+    </Ctx.Provider>
+  );
 }

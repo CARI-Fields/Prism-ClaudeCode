@@ -17,20 +17,34 @@ export function RunFilterBar({ domains, filter, onToggle, onClear, onQuery }: Pr
   return (
     <div className="run-filter-bar">
       <RailFilterGroup
-        label="Task" items={domains.task} active={filter.task}
-        onToggle={(t) => onToggle('task', t)} onClear={() => onClear('task')}
+        label="Task"
+        items={domains.task}
+        active={filter.task}
+        onToggle={(t) => onToggle('task', t)}
+        onClear={() => onClear('task')}
       />
       <RailFilterGroup
-        label="Feature" items={domains.condition} active={filter.condition} dotFor={conditionColor}
-        onToggle={(t) => onToggle('condition', t)} onClear={() => onClear('condition')}
+        label="Feature"
+        items={domains.condition}
+        active={filter.condition}
+        dotFor={conditionColor}
+        onToggle={(t) => onToggle('condition', t)}
+        onClear={() => onClear('condition')}
       />
       <RailFilterGroup
-        label="Rollout" items={domains.rep} active={filter.rep}
-        onToggle={(t) => onToggle('rep', t)} onClear={() => onClear('rep')}
+        label="Rollout"
+        items={domains.rep}
+        active={filter.rep}
+        onToggle={(t) => onToggle('rep', t)}
+        onClear={() => onClear('rep')}
       />
       <InputGroup
-        type="search" leftIcon="search" placeholder="Search runs…" aria-label="Search runs"
-        value={filter.query} onChange={(e) => onQuery(e.currentTarget.value)}
+        type="search"
+        leftIcon="search"
+        placeholder="Search runs…"
+        aria-label="Search runs"
+        value={filter.query}
+        onChange={(e) => onQuery(e.currentTarget.value)}
       />
     </div>
   );

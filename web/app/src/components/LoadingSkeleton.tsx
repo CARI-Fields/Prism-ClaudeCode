@@ -23,7 +23,12 @@ export function LoadingSkeleton() {
   const dark = resolveThemeMode(parseHash(window.location.hash).theme) === 'dark';
   return (
     <div className={`app-root${dark ? ' bp5-dark' : ''}`}>
-      <div className="app-shell skeleton-root" aria-busy="true" aria-live="polite" aria-label="Loading report">
+      <div
+        className="app-shell skeleton-root"
+        aria-busy="true"
+        aria-live="polite"
+        aria-label="Loading report"
+      >
         <div className="app-topbar bp5-navbar skel-topbar">
           <span className="skel skel-line" style={{ width: 170 }} />
           <span className="skel-row">

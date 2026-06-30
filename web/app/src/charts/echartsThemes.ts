@@ -6,7 +6,14 @@ const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 // `split` is a dedicated, lighter gridline color so splitlines sit quieter than
 // the heavier axis `line`. `tipBg`/`tipBorder` match the design's tooltip tokens
 // (panel-2 surface, line-2 border) rather than the panel/line used elsewhere.
-function theme(ink: string, muted: string, line: string, split: string, tipBg: string, tipBorder: string) {
+function theme(
+  ink: string,
+  muted: string,
+  line: string,
+  split: string,
+  tipBg: string,
+  tipBorder: string,
+) {
   return {
     backgroundColor: 'transparent',
     textStyle: { fontFamily: MONO, color: ink },

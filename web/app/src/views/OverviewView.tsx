@@ -14,7 +14,8 @@ export function OverviewView() {
   const { report } = useReport();
   const { effective, effectiveTask } = useFilter();
   const { mode } = useTheme();
-  const variant = data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
+  const variant =
+    data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
   const runs = data?.runs ?? [];
   const sel = effective('overview');
   const selTask = effectiveTask('overview');
@@ -37,13 +38,18 @@ export function OverviewView() {
           <p className="panel-lede" dangerouslySetInnerHTML={{ __html: variant.lede }} />
           <ul className="strategy-legend">
             {variant.conditions.map((c) => (
-              <li key={c}><span className="rail-dot" style={{ background: conditionColor(c) }} /><b>{c}</b> — <span>{data.manifest.strategy_desc[c] ?? ''}</span></li>
+              <li key={c}>
+                <span className="rail-dot" style={{ background: conditionColor(c) }} />
+                <b>{c}</b> — <span>{data.manifest.strategy_desc[c] ?? ''}</span>
+              </li>
             ))}
           </ul>
         </Card>
         <Card elevation={Elevation.ZERO} className="panel-card">
           <h2 className="panel-title">Experiment matrix</h2>
-          <p className="panel-sub">Run status for each task × feature cell — green passed, red failed, grey missing.</p>
+          <p className="panel-sub">
+            Run status for each task × feature cell — green passed, red failed, grey missing.
+          </p>
           <EChart className="chart" themeMode={mode} option={matrixOption(matrix, matrixPanel)} />
         </Card>
       </div>
@@ -61,7 +67,8 @@ export function OverviewView() {
               {prompt ? (
                 <details className="task-prompt">
                   <summary>
-                    Prompt <span className="task-prompt-src">experiment/tasks/{task}/prompt.md</span>
+                    Prompt{' '}
+                    <span className="task-prompt-src">experiment/tasks/{task}/prompt.md</span>
                   </summary>
                   <pre>{prompt}</pre>
                 </details>

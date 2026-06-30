@@ -24,7 +24,9 @@ describe('useExportDownload', () => {
     vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
 
     const { result } = renderHook(() => useExportDownload());
-    await act(async () => { await result.current.download(['r1'], false); });
+    await act(async () => {
+      await result.current.download(['r1'], false);
+    });
 
     expect(client.fetchExport).toHaveBeenCalledWith(['r1'], false);
     expect(click).toHaveBeenCalled();

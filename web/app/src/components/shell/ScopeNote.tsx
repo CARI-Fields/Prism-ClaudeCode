@@ -31,8 +31,15 @@ export function ScopeNote() {
   ];
   if (sel.agent.length === 1) parts.push(`${sel.agent[0]} only`);
 
-  const anyActive = Boolean(filter.task.length || filter.condition.length || filter.rep.length || filter.agent.length);
-  const resetAll = () => { clear('task'); clear('condition'); clear('rep'); clear('agent'); };
+  const anyActive = Boolean(
+    filter.task.length || filter.condition.length || filter.rep.length || filter.agent.length,
+  );
+  const resetAll = () => {
+    clear('task');
+    clear('condition');
+    clear('rep');
+    clear('agent');
+  };
 
   return (
     <div className="scope-note">
@@ -50,7 +57,12 @@ export function ScopeNote() {
             role="button"
             tabIndex={0}
             onClick={resetAll}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); resetAll(); } }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                resetAll();
+              }
+            }}
           >
             reset
           </span>

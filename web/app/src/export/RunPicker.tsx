@@ -18,19 +18,30 @@ export function RunPicker() {
   const [filter, setFilter] = useState<RunFilter>(EMPTY);
   const { download, busy, error } = useExportDownload();
 
-  const domains = useMemo(() => ({
-    task: uniqSorted(runs.map((r) => r.task)),
-    condition: uniqSorted(runs.map((r) => r.condition)),
-    rep: uniqSorted(runs.map((r) => `r${r.rep}`)),
-  }), [runs]);
+  const domains = useMemo(
+    () => ({
+      task: uniqSorted(runs.map((r) => r.task)),
+      condition: uniqSorted(runs.map((r) => r.condition)),
+      rep: uniqSorted(runs.map((r) => `r${r.rep}`)),
+    }),
+    [runs],
+  );
   const visible = useMemo(() => filterRuns(runs, filter), [runs, filter]);
 
   const toggle = (id: string) =>
-    setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   const toggleDim = (dim: Dim, token: string) =>
     setFilter((f) => {
       const cur = f[dim];
-      return { ...f, [dim]: cur.includes(token) ? cur.filter((x) => x !== token) : [...cur, token] };
+      return {
+        ...f,
+        [dim]: cur.includes(token) ? cur.filter((x) => x !== token) : [...cur, token],
+      };
     });
   const clearDim = (dim: Dim) => setFilter((f) => ({ ...f, [dim]: [] }));
   const setQuery = (query: string) => setFilter((f) => ({ ...f, query }));
@@ -50,7 +61,13 @@ export function RunPicker() {
 
   return (
     <div className="run-picker">
-      <RunFilterBar domains={domains} filter={filter} onToggle={toggleDim} onClear={clearDim} onQuery={setQuery} />
+      <RunFilterBar
+        domains={domains}
+        filter={filter}
+        onToggle={toggleDim}
+        onClear={clearDim}
+        onQuery={setQuery}
+      />
       <div className="run-picker-head">
         <div className="run-picker-selinfo">
           <Checkbox
@@ -87,7 +104,9 @@ export function RunPicker() {
         icon="download"
         loading={busy}
         disabled={orderedSelected.length === 0}
-        text={`Download ${orderedSelected.length || ''} ${orderedSelected.length === 1 ? 'trace' : 'traces'}`.replace('  ', ' ').trim()}
+        text={`Download ${orderedSelected.length || ''} ${orderedSelected.length === 1 ? 'trace' : 'traces'}`
+          .replace('  ', ' ')
+          .trim()}
         onClick={() => download(orderedSelected, includeTexts)}
       />
     </div>

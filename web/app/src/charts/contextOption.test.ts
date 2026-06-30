@@ -6,7 +6,14 @@ import { AGENT_TYPE_ORDER } from './agentSymbols';
 import { contextOption } from './contextOption';
 
 const rows = [
-  { request_index: 0, request_type: 'main-agent', input_tokens: 10, cache_read: 30, cache_creation_5m: 0, cache_creation_1h: 0 },
+  {
+    request_index: 0,
+    request_type: 'main-agent',
+    input_tokens: 10,
+    cache_read: 30,
+    cache_creation_5m: 0,
+    cache_creation_1h: 0,
+  },
 ] as unknown as Turn[];
 const o = orderedRequests(new Map([[0, 'main-agent']]), [0], 'all', 'none', AGENT_TYPE_ORDER);
 
@@ -34,7 +41,9 @@ describe('contextOption', () => {
 
   it('stacks the context head on top: head bucket is the first bar series (inverse axis)', () => {
     const bd = breakdownData(COMPOSE_MODES.token, rows, []);
-    const bars = (contextOption(bd, o, false, []) as any).series.filter((s: any) => s.type === 'bar');
+    const bars = (contextOption(bd, o, false, []) as any).series.filter(
+      (s: any) => s.type === 'bar',
+    );
     // bd.buckets is head→tail; the token axis is inverse, so ECharts draws the
     // first series at the TOP — head bucket first, tail bucket last.
     expect(bars[0].name).toBe(bd.buckets[0]);

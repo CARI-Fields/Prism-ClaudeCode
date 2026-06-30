@@ -4,14 +4,18 @@ import { getToken } from './token';
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
-    super(message); this.name = 'ApiError'; this.status = status;
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
   }
 }
 export function apiBase(): string {
   return (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
 }
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${apiBase()}${path}`, { headers: { Authorization: `Bearer ${getToken()}` } });
+  const res = await fetch(`${apiBase()}${path}`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
   if (res.status === 401) throw new ApiError(401, 'unauthorized');
   if (!res.ok) throw new ApiError(res.status, `request failed: ${res.status}`);
   return (await res.json()) as T;

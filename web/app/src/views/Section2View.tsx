@@ -13,7 +13,8 @@ export function Section2View() {
   const { report } = useReport();
   const { effective, effectiveTask } = useFilter();
   const { mode } = useTheme();
-  const variant = data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
+  const variant =
+    data?.manifest.variants.find((v) => v.key === report) ?? data?.manifest.variants[0];
   const sel = effective('s2');
   const selTask = effectiveTask('s2');
   const turns = useMemo(
@@ -28,17 +29,31 @@ export function Section2View() {
     <div className="view view-stack">
       <Card elevation={Elevation.ZERO} className="panel-card">
         <h2 className="panel-title">Prefix cache hit rate (accumulated)</h2>
-        <p className="panel-sub">Cumulative share of input tokens served from the prefix cache as a run progresses, averaged across rollouts.</p>
+        <p className="panel-sub">
+          Cumulative share of input tokens served from the prefix cache as a run progresses,
+          averaged across rollouts.
+        </p>
         {tasks.map((task) => (
           <div key={task}>
             <h3 className="cache-sub">{taskLabel(task)}</h3>
-            <EChart className="chart short" themeMode={mode} option={cacheOption(cacheByAgent(turns.filter((t) => t.task === task)), conds, singleAgent)} />
+            <EChart
+              className="chart short"
+              themeMode={mode}
+              option={cacheOption(
+                cacheByAgent(turns.filter((t) => t.task === task)),
+                conds,
+                singleAgent,
+              )}
+            />
           </div>
         ))}
       </Card>
       <Card elevation={Elevation.ZERO} className="panel-card">
         <h2 className="panel-title">Prefix cache hit rate vs context length</h2>
-        <p className="panel-sub">Per-request hit rate against prompt size — each dot is one request. Larger contexts tend to reuse more cache.</p>
+        <p className="panel-sub">
+          Per-request hit rate against prompt size — each dot is one request. Larger contexts tend
+          to reuse more cache.
+        </p>
         <EChart className="chart" themeMode={mode} option={latencyOption(turns, conds)} />
       </Card>
     </div>

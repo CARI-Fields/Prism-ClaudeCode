@@ -3,9 +3,33 @@ import type { Run } from '../types';
 import { conditionMetrics, conditionOverheads } from './conditionMetrics';
 
 const runs = [
-  { task: 'coding', condition: 'single_agent', rep: 1, success: true, num_requests: 4, total_cost_usd: 0.1, quality_score: 2 },
-  { task: 'coding', condition: 'single_agent', rep: 2, success: false, num_requests: 6, total_cost_usd: 0.3, quality_score: null },
-  { task: 'coding', condition: 'subagents', rep: 1, success: true, num_requests: 8, total_cost_usd: 0.5, quality_score: 3 },
+  {
+    task: 'coding',
+    condition: 'single_agent',
+    rep: 1,
+    success: true,
+    num_requests: 4,
+    total_cost_usd: 0.1,
+    quality_score: 2,
+  },
+  {
+    task: 'coding',
+    condition: 'single_agent',
+    rep: 2,
+    success: false,
+    num_requests: 6,
+    total_cost_usd: 0.3,
+    quality_score: null,
+  },
+  {
+    task: 'coding',
+    condition: 'subagents',
+    rep: 1,
+    success: true,
+    num_requests: 8,
+    total_cost_usd: 0.5,
+    quality_score: 3,
+  },
 ] as unknown as Run[];
 
 describe('conditionMetrics', () => {
@@ -31,7 +55,11 @@ describe('conditionOverheads', () => {
     expect(sub.num_requests_factor).toBeCloseTo(8 / 5); // 1.6
     const sa = o.find((r) => r.task === 'coding' && r.condition === 'single_agent')!;
     expect(sa.num_requests_factor).toBeCloseTo(1);
-    const noBase = conditionOverheads(conditionMetrics(runs, ['coding'], ['subagents']), ['coding'], ['subagents']);
+    const noBase = conditionOverheads(
+      conditionMetrics(runs, ['coding'], ['subagents']),
+      ['coding'],
+      ['subagents'],
+    );
     expect(noBase[0].num_requests_factor).toBeNull();
   });
 });

@@ -22,10 +22,19 @@ export function EChart({ option, themeMode = 'light', className, onClick }: ECha
     const chart = echarts.init(elRef.current, reportThemeName(themeMode));
     chartRef.current = chart;
     chart.setOption(option as Parameters<ECharts['setOption']>[0], true);
-    chart.on('click', (p) => onClickRef.current?.({ seriesName: String(p.seriesName ?? ''), dataIndex: Number(p.dataIndex) }));
+    chart.on('click', (p) =>
+      onClickRef.current?.({
+        seriesName: String(p.seriesName ?? ''),
+        dataIndex: Number(p.dataIndex),
+      }),
+    );
     const onResize = () => chart.resize();
     window.addEventListener('resize', onResize);
-    return () => { window.removeEventListener('resize', onResize); chart.dispose(); chartRef.current = null; };
+    return () => {
+      window.removeEventListener('resize', onResize);
+      chart.dispose();
+      chartRef.current = null;
+    };
   }, [themeMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

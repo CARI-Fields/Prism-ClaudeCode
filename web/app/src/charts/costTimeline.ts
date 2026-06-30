@@ -12,14 +12,14 @@ export function costTimelineOption(
   barMaxWidth: number,
   barCategoryGap: string = '20%',
 ): EChartsOption {
-  const ordered = o.indexes.map(i => rows[i]);
+  const ordered = o.indexes.map((i) => rows[i]);
 
   function barData(field: keyof Turn): number[] {
-    return ordered.map(t => n(t[field]));
+    return ordered.map((t) => n(t[field]));
   }
 
   function lineData(field: keyof Turn): { value: number; symbol: string }[] {
-    return ordered.map(t => ({
+    return ordered.map((t) => ({
       value: n(t[field]),
       symbol: REQUEST_TYPE_SYMBOLS[String(t.request_type ?? '')] ?? 'circle',
     }));
@@ -28,7 +28,15 @@ export function costTimelineOption(
   return {
     textStyle: baseTextStyle(),
     tooltip: { ...TOOLTIP, trigger: 'axis' },
-    legend: bottomLegend(['input', 'cache read', 'cache write 5m', 'cache write 1h', 'output', 'TTFT', 'total']),
+    legend: bottomLegend([
+      'input',
+      'cache read',
+      'cache write 5m',
+      'cache write 1h',
+      'output',
+      'TTFT',
+      'total',
+    ]),
     grid: { left: 66, right: 24, top: 16, bottom: 120 },
     xAxis: groupedXAxis(o),
     yAxis: [
@@ -36,19 +44,70 @@ export function costTimelineOption(
       valueAxis({ ...yName('seconds', 46), splitLine: { show: false } }),
     ] as EChartsOption['yAxis'],
     series: [
-      { name: 'input',          type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('input_tokens'),       itemStyle: { color: '#3b5bdb' } },
-      { name: 'cache read',     type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('cache_read'),          itemStyle: { color: '#0c8599' } },
-      { name: 'cache write 5m', type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('cache_creation_5m'),  itemStyle: { color: '#e8590c' } },
-      { name: 'cache write 1h', type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('cache_creation_1h'),  itemStyle: { color: '#f59f00' } },
-      { name: 'output',         type: 'bar',  stack: 'tokens', xAxisIndex: 0, barMaxWidth, barCategoryGap, data: barData('output_tokens'),      itemStyle: { color: '#7048e8' } },
       {
-        name: 'TTFT', type: 'line', xAxisIndex: 0, yAxisIndex: 1,
+        name: 'input',
+        type: 'bar',
+        stack: 'tokens',
+        xAxisIndex: 0,
+        barMaxWidth,
+        barCategoryGap,
+        data: barData('input_tokens'),
+        itemStyle: { color: '#3b5bdb' },
+      },
+      {
+        name: 'cache read',
+        type: 'bar',
+        stack: 'tokens',
+        xAxisIndex: 0,
+        barMaxWidth,
+        barCategoryGap,
+        data: barData('cache_read'),
+        itemStyle: { color: '#0c8599' },
+      },
+      {
+        name: 'cache write 5m',
+        type: 'bar',
+        stack: 'tokens',
+        xAxisIndex: 0,
+        barMaxWidth,
+        barCategoryGap,
+        data: barData('cache_creation_5m'),
+        itemStyle: { color: '#e8590c' },
+      },
+      {
+        name: 'cache write 1h',
+        type: 'bar',
+        stack: 'tokens',
+        xAxisIndex: 0,
+        barMaxWidth,
+        barCategoryGap,
+        data: barData('cache_creation_1h'),
+        itemStyle: { color: '#f59f00' },
+      },
+      {
+        name: 'output',
+        type: 'bar',
+        stack: 'tokens',
+        xAxisIndex: 0,
+        barMaxWidth,
+        barCategoryGap,
+        data: barData('output_tokens'),
+        itemStyle: { color: '#7048e8' },
+      },
+      {
+        name: 'TTFT',
+        type: 'line',
+        xAxisIndex: 0,
+        yAxisIndex: 1,
         data: lineData('ttft_s'),
         itemStyle: { color: '#1098ad' },
         lineStyle: { color: '#1098ad' },
       },
       {
-        name: 'total', type: 'line', xAxisIndex: 0, yAxisIndex: 1,
+        name: 'total',
+        type: 'line',
+        xAxisIndex: 0,
+        yAxisIndex: 1,
         data: lineData('total_s'),
         itemStyle: { color: '#c2255c' },
         lineStyle: { color: '#c2255c' },

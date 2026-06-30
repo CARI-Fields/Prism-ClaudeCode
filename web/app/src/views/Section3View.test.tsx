@@ -6,12 +6,30 @@ import { Section3View } from './Section3View';
 import type { Manifest } from '../types';
 
 // AppStateProvider persists filter state to the URL hash; reset it so tests don't leak.
-beforeEach(() => { window.location.hash = ''; });
+beforeEach(() => {
+  window.location.hash = '';
+});
 
 vi.mock('../components/EChart', () => ({ EChart: () => <div data-testid="chart" /> }));
 vi.mock('../components/ContextTextPanel', () => ({ ContextTextPanel: () => <div /> }));
-const manifest: Manifest = { variants: [{ key: 'r1', eyebrow: '', title: 'R1', lede: '', conditions: ['goal', 'subagents'], tasks: ['coding'] }], strategy_desc: {}, task_meta: {}, available: [] };
-vi.mock('../data/DataContext', () => ({ useData: () => ({ data: { manifest, runs: [], turns: [], components: [] } }) }));
+const manifest: Manifest = {
+  variants: [
+    {
+      key: 'r1',
+      eyebrow: '',
+      title: 'R1',
+      lede: '',
+      conditions: ['goal', 'subagents'],
+      tasks: ['coding'],
+    },
+  ],
+  strategy_desc: {},
+  task_meta: {},
+  available: [],
+};
+vi.mock('../data/DataContext', () => ({
+  useData: () => ({ data: { manifest, runs: [], turns: [], components: [] } }),
+}));
 
 function Probe() {
   const f = useFilter();
@@ -26,7 +44,12 @@ function Probe() {
 
 describe('Section3View Feature filter', () => {
   it('reads the global (left-rail) Feature filter and supports multi-select', async () => {
-    render(<AppStateProvider manifest={manifest}><Section3View /><Probe /></AppStateProvider>);
+    render(
+      <AppStateProvider manifest={manifest}>
+        <Section3View />
+        <Probe />
+      </AppStateProvider>,
+    );
     expect(screen.getByText('s3cond:')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'add-goal' }));
     expect(screen.getByText('s3cond:goal')).toBeInTheDocument();
@@ -36,7 +59,11 @@ describe('Section3View Feature filter', () => {
   });
 
   it('no longer renders an in-view Feature selector (merged into the rail)', () => {
-    render(<AppStateProvider manifest={manifest}><Section3View /></AppStateProvider>);
+    render(
+      <AppStateProvider manifest={manifest}>
+        <Section3View />
+      </AppStateProvider>,
+    );
     expect(screen.queryByText('Feature (single run)')).not.toBeInTheDocument();
   });
 });

@@ -3,12 +3,18 @@ import { ApiError, apiGet, getManifest } from './client';
 import { setToken } from './token';
 
 function mockFetch(status: number, body: unknown) {
-  return vi.fn().mockResolvedValue({ status, ok: status >= 200 && status < 300, json: async () => body });
+  return vi
+    .fn()
+    .mockResolvedValue({ status, ok: status >= 200 && status < 300, json: async () => body });
 }
 
 describe('apiGet', () => {
-  beforeEach(() => { localStorage.clear(); });
-  afterEach(() => { vi.unstubAllGlobals(); });
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   it('sends the bearer token and returns json', async () => {
     setToken('secret123');

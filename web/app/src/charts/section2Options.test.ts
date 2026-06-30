@@ -4,8 +4,34 @@ import { cacheByAgent } from './cacheTimeline';
 import { cacheOption, latencyOption } from './section2Options';
 
 const turns = [
-  { run_id: 'a', task: 'coding', condition: 'single_agent', rep: 1, request_type: 'main-agent', request_index: 0, input_tokens: 0, cache_read: 100, cache_creation_5m: 0, cache_creation_1h: 0, total_s: 1, ttft_s: 0.5 },
-  { run_id: 'b', task: 'coding', condition: 'subagents', rep: 2, request_type: 'task-subagent', request_index: 0, input_tokens: 0, cache_read: 50, cache_creation_5m: 50, cache_creation_1h: 0, total_s: 2, ttft_s: 0.4 },
+  {
+    run_id: 'a',
+    task: 'coding',
+    condition: 'single_agent',
+    rep: 1,
+    request_type: 'main-agent',
+    request_index: 0,
+    input_tokens: 0,
+    cache_read: 100,
+    cache_creation_5m: 0,
+    cache_creation_1h: 0,
+    total_s: 1,
+    ttft_s: 0.5,
+  },
+  {
+    run_id: 'b',
+    task: 'coding',
+    condition: 'subagents',
+    rep: 2,
+    request_type: 'task-subagent',
+    request_index: 0,
+    input_tokens: 0,
+    cache_read: 50,
+    cache_creation_5m: 50,
+    cache_creation_1h: 0,
+    total_s: 2,
+    ttft_s: 0.4,
+  },
 ] as unknown as Turn[];
 const conds = ['single_agent', 'subagents'];
 
@@ -28,7 +54,9 @@ describe('section2 option builders', () => {
     expect(sub.data[0].value[1]).toBeCloseTo(50);
   });
   it('latencyOption: skips zero-context turns', () => {
-    const z = [{ ...turns[0], cache_read: 0, input_tokens: 0, cache_creation_5m: 0, cache_creation_1h: 0 }] as unknown as Turn[];
+    const z = [
+      { ...turns[0], cache_read: 0, input_tokens: 0, cache_creation_5m: 0, cache_creation_1h: 0 },
+    ] as unknown as Turn[];
     const opt = latencyOption(z, ['single_agent']) as any;
     expect(opt.series[0].data).toHaveLength(0);
   });

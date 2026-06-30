@@ -1,5 +1,12 @@
 import type { EChartsOption } from 'echarts';
-import { baseTextStyle, TOOLTIP, valueAxis, axisLabelStyle, yName, bottomLegend } from './echartsTheme';
+import {
+  baseTextStyle,
+  TOOLTIP,
+  valueAxis,
+  axisLabelStyle,
+  yName,
+  bottomLegend,
+} from './echartsTheme';
 import { groupedXAxis, type Ordered } from './ordered';
 import type { Breakdown } from './contextBreakdown';
 
@@ -54,7 +61,13 @@ export function contextOption(
   const yAxis = showHit
     ? [
         valueAxis({ ...yName('tokens', 46), min: 0, inverse: true }),
-        valueAxis({ min: 0, max: 100, inverse: true, splitLine: { show: false }, axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` } }),
+        valueAxis({
+          min: 0,
+          max: 100,
+          inverse: true,
+          splitLine: { show: false },
+          axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` },
+        }),
       ]
     : [valueAxis({ ...yName('tokens', 46), min: 0, inverse: true })];
 

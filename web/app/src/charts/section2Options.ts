@@ -7,7 +7,15 @@ import type { Turn } from '../types';
 import type { CacheRow } from './cacheTimeline';
 import { promptTokens } from './cacheTimeline';
 import { REP_LINE_TYPES, REQUEST_TYPE_SYMBOLS, agentDotSpec } from './agentSymbols';
-import { baseTextStyle, TOOLTIP, valueAxis, axisLabelStyle, xName, yName, bottomLegend } from './echartsTheme';
+import {
+  baseTextStyle,
+  TOOLTIP,
+  valueAxis,
+  axisLabelStyle,
+  xName,
+  yName,
+  bottomLegend,
+} from './echartsTheme';
 import { conditionColor } from '../theme';
 import { fmt } from './format';
 
@@ -65,8 +73,8 @@ export function cacheOption(
   const series = [...groups.values()]
     .sort(
       (a, b) =>
-        ((condOrder.get(a.condition) ?? 999) - (condOrder.get(b.condition) ?? 999)) ||
-        (a.rep - b.rep) ||
+        (condOrder.get(a.condition) ?? 999) - (condOrder.get(b.condition) ?? 999) ||
+        a.rep - b.rep ||
         a.type.localeCompare(b.type),
     )
     .map((g) => {
@@ -128,7 +136,12 @@ export function cacheOption(
     legend: bottomLegend(condsPresent),
     grid: { left: 10, right: 16, top: 26, bottom: 44, containLabel: true },
     xAxis: { type: 'value', ...xName('request #', 28), min: 1 },
-    yAxis: valueAxis({ ...yName('hit rate', 46), min: 0, max: 100, axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` } }),
+    yAxis: valueAxis({
+      ...yName('hit rate', 46),
+      min: 0,
+      max: 100,
+      axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` },
+    }),
     series,
   } as unknown as EChartsOption;
 }
@@ -167,7 +180,12 @@ export function latencyOption(turns: Turn[], conditions: string[]): EChartsOptio
     };
     // security-monitor renders hollow (outline only); others are filled
     if (spec.hollow) {
-      item.itemStyle = { color: 'transparent', borderColor: color, borderWidth: 1.6, opacity: 0.95 };
+      item.itemStyle = {
+        color: 'transparent',
+        borderColor: color,
+        borderWidth: 1.6,
+        opacity: 0.95,
+      };
     }
     byCondition.get(turn.condition)!.push(item);
   }
@@ -200,7 +218,12 @@ export function latencyOption(turns: Turn[], conditions: string[]): EChartsOptio
     legend: bottomLegend(conditions),
     grid: { left: 10, right: 16, top: 26, bottom: 44, containLabel: true },
     xAxis: valueAxis({ ...xName('context length (tokens)', 36), scale: true }),
-    yAxis: valueAxis({ ...yName('hit rate', 46), min: 0, max: 100, axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` } }),
+    yAxis: valueAxis({
+      ...yName('hit rate', 46),
+      min: 0,
+      max: 100,
+      axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` },
+    }),
     series,
   } as unknown as EChartsOption;
 }

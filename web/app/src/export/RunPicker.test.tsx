@@ -4,13 +4,19 @@ import userEvent from '@testing-library/user-event';
 import { RunPicker } from './RunPicker';
 
 const download = vi.fn();
-vi.mock('./useExportDownload', () => ({ useExportDownload: () => ({ download, busy: false, error: null }) }));
+vi.mock('./useExportDownload', () => ({
+  useExportDownload: () => ({ download, busy: false, error: null }),
+}));
 vi.mock('../data/DataContext', () => ({
-  useData: () => ({ data: { runs: [
-    { run_id: 'a1', task: 'coding', condition: 'goal', rep: 1 },
-    { run_id: 'b2', task: 'research', condition: 'subagents', rep: 2 },
-    { run_id: 'c3', task: 'coding', condition: 'subagents', rep: 1 },
-  ] } }),
+  useData: () => ({
+    data: {
+      runs: [
+        { run_id: 'a1', task: 'coding', condition: 'goal', rep: 1 },
+        { run_id: 'b2', task: 'research', condition: 'subagents', rep: 2 },
+        { run_id: 'c3', task: 'coding', condition: 'subagents', rep: 1 },
+      ],
+    },
+  }),
 }));
 
 describe('RunPicker', () => {

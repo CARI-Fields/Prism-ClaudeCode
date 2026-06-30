@@ -25,6 +25,8 @@ describe('filterRuns', () => {
     expect(ids(filterRuns(runs, { ...EMPTY, query: 'research' }))).toEqual(['b2']);
   });
   it('combines chips and search', () => {
-    expect(ids(filterRuns(runs, { ...EMPTY, task: ['coding'], query: 'subagents' }))).toEqual(['c3']);
+    expect(ids(filterRuns(runs, { ...EMPTY, task: ['coding'], query: 'subagents' }))).toEqual([
+      'c3',
+    ]);
   });
 });
