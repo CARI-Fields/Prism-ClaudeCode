@@ -46,8 +46,6 @@ def _request_type(turn: dict) -> str:
     system_lower = system_text.lower()
     if "security monitor for autonomous ai coding agents" in system_lower:
         return "security-monitor"
-    if "cc_is_subagent=true" not in system_lower:
-        return "main-agent"
 
     tool_names = {
         tool.get("name") for tool in turn.get("tools") or []
@@ -57,6 +55,12 @@ def _request_type(turn: dict) -> str:
         _message_text(message) for message in turn.get("messages") or []
     ).lower()
 
+    # WebSearch / WebFetch (and workflow) sub-requests are spawned by tool use on a
+    # distinct internal path and do NOT carry the cc_is_subagent=true marker, so they
+    # must be detected by their own signatures BEFORE the main-agent fallback. Left to
+    # the marker gate they fall into main-agent, and their small, uncached prompts
+    # interleave with the real main-agent context — turning its monotonically growing
+    # curve into a sawtooth.
     if "workflow orchestration script" in system_lower:
         return "workflow-subagent"
     if "assistant for performing a web search tool use" in system_lower or "web_search" in tool_names:
@@ -65,7 +69,9 @@ def _request_type(turn: dict) -> str:
         return "web-fetch-subagent"
     if "agent for claude code" in system_lower:
         return "task-subagent"
-    return "subagent-internal"
+    if "cc_is_subagent=true" in system_lower:
+        return "subagent-internal"
+    return "main-agent"
 
 
 def tap_turns(tap: list) -> list[dict]:

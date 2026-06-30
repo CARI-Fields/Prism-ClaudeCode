@@ -196,6 +196,42 @@ def test_tap_marks_request_type_subclasses_without_filtering():
     assert sum(row["est_tokens"] for row in monitor_components) == 31
 
 
+def test_web_search_and_fetch_subrequests_without_subagent_marker_are_not_main_agent():
+    # Real WebSearch / WebFetch sub-requests run on a distinct internal path whose
+    # system prompt does NOT carry the cc_is_subagent=true marker. They must still be
+    # classified by their own signatures, not bucketed into main-agent — otherwise
+    # their small, uncached prompts interleave with the real main-agent context and
+    # turn its monotonically growing curve into a sawtooth.
+    def turn(system_text, tools, user_text):
+        return {
+            "timestamp": "2026-06-19T21:02:44.554578+00:00",
+            "duration_ms": 1000,
+            "model": "claude-sonnet-4-6",
+            "system": [{"type": "text", "text": system_text}],
+            "tools": [{"name": t, "description": ""} for t in tools],
+            "messages": [{"role": "user", "content": user_text}],
+            "response": {"usage": {
+                "input_tokens": 10, "cache_read_input_tokens": 0,
+                "cache_creation_input_tokens": 0, "output_tokens": 5,
+            }},
+        }
+
+    tap = [
+        turn("You are an interactive agent that helps users with software "
+             "engineering tasks.", ["Agent", "Bash", "Read"], "Do the research."),
+        turn("You are an assistant for performing a web search tool use",
+             ["web_search"], "Search recent sources."),
+        turn("You are a Claude agent, built on Anthropic's Claude Agent SDK.",
+             [], "Web page content:\n---\nPaper text"),
+    ]
+
+    assert [row["request_type"] for row in tap_turns(tap)] == [
+        "main-agent",
+        "web-search-subagent",
+        "web-fetch-subagent",
+    ]
+
+
 def test_tap_components_anchored_to_prompt_tokens():
     tap = json.loads(FIX.read_text())
     comps = tap_components(tap)
