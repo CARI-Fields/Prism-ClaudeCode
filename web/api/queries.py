@@ -6,7 +6,7 @@ from pathlib import Path
 
 import duckdb
 
-from analysis.report_variants import STRATEGY_DESC, TASK_META, VARIANTS
+from analysis.report_variants import STRATEGY_DESC, TASK_META, VARIANTS, read_prompt
 from web.api.config import get_settings
 
 
@@ -80,5 +80,8 @@ def get_manifest() -> dict:
         "variants": VARIANTS,
         "strategy_desc": STRATEGY_DESC,
         "task_meta": TASK_META,
+        # Full task spec per task (empty string when no prompt.md exists, e.g. the
+        # long-horizon tasks). Read from experiment/tasks/<task>/prompt.md.
+        "task_prompts": {task: read_prompt(task) for task in TASK_META},
         "available": available,
     }

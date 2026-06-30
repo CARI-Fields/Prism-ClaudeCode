@@ -34,7 +34,7 @@ services-up:
 	$(MAKE) ttft-up
 
 analyze:
-	$(PY) -c "from analysis.report import generate; print(generate('analysis/data/raw','analysis/data/processed','analysis/figures','analysis/reports/report.md'))"
+	set -a; [ -f .env ] && . ./.env; set +a; $(PY) -m analysis.report
 
 serve:
 	DATA_DIR=analysis/data/processed $(PY) -m uvicorn web.api.app:app --reload --port 8799

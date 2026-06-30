@@ -12,7 +12,6 @@ import {
   catAxis,
   xName,
   yName,
-  rightLegend,
   bottomLegend,
 } from './echartsTheme';
 import { fmt, fmtUsd, fmtMetric } from './format';
@@ -23,11 +22,14 @@ import { taskLabel } from '../data/taskLabel';
 // matrixOption — heatmap showing per-cell status codes
 // Ported from renderMatrix() echarts_report.py:1411-1451
 // ---------------------------------------------------------------------------
-export function matrixOption(m: {
-  rows: string[];
-  cols: string[];
-  cells: MatrixCell[];
-}): EChartsOption {
+export function matrixOption(
+  m: {
+    rows: string[];
+    cols: string[];
+    cells: MatrixCell[];
+  },
+  panelColor: string,
+): EChartsOption {
   const { rows, cols, cells } = m;
   const colIndex = new Map(cols.map((c, i) => [c, i]));
   const rowIndex = new Map(rows.map((r, i) => [r, i]));
@@ -68,8 +70,8 @@ export function matrixOption(m: {
           fontWeight: 600,
           formatter: (p: { data: [number, number, number] }) => STATUS_GLYPHS[p.data[2]] ?? '',
         },
-        itemStyle: { borderColor: '#ffffff', borderWidth: 3 },
-        emphasis: { itemStyle: { borderWidth: 1 } },
+        itemStyle: { borderColor: panelColor, borderWidth: 3, borderRadius: 4 },
+        emphasis: { itemStyle: { borderColor: panelColor } },
       },
     ],
   } as unknown as EChartsOption;
@@ -92,7 +94,8 @@ export function conditionOption(
     return {
       name: taskLabel(task),
       type: 'bar' as const,
-      barMaxWidth: 46,
+      barMaxWidth: 38,
+      barGap: '12%',
       data: conditions.map((c) => {
         const row = rows.find((r) => r.condition === c);
         return row ? ((row as unknown as Record<string, unknown>)[metric] as number | null) : null;
@@ -100,16 +103,16 @@ export function conditionOption(
       itemStyle: grouped
         ? {
             color: PALETTE[ti % PALETTE.length],
-            borderRadius: [4, 4, 0, 0] as [number, number, number, number],
+            borderRadius: [3, 3, 0, 0] as [number, number, number, number],
           }
         : {
             color: (p: { dataIndex: number }) => conditionColor(conditions[p.dataIndex] ?? ''),
-            borderRadius: [4, 4, 0, 0] as [number, number, number, number],
+            borderRadius: [3, 3, 0, 0] as [number, number, number, number],
           },
       label: {
-        show: !grouped,
+        show: true,
         position: 'top' as const,
-        fontSize: 11,
+        fontSize: 10,
         formatter: (p: { value: number | null }) => fmtMetric(p.value, metric),
       },
     };
@@ -147,7 +150,8 @@ export function overheadOption(
     return {
       name: taskLabel(task),
       type: 'bar' as const,
-      barMaxWidth: 46,
+      barMaxWidth: 38,
+      barGap: '12%',
       data: conditions.map((c) => {
         const row = rows.find((r) => r.condition === c);
         return row ? ((row as unknown as Record<string, unknown>)[factor] as number | null) : null;
@@ -155,16 +159,16 @@ export function overheadOption(
       itemStyle: grouped
         ? {
             color: PALETTE[ti % PALETTE.length],
-            borderRadius: [4, 4, 0, 0] as [number, number, number, number],
+            borderRadius: [3, 3, 0, 0] as [number, number, number, number],
           }
         : {
             color: (p: { dataIndex: number }) => conditionColor(conditions[p.dataIndex] ?? ''),
-            borderRadius: [4, 4, 0, 0] as [number, number, number, number],
+            borderRadius: [3, 3, 0, 0] as [number, number, number, number],
           },
       label: {
-        show: !grouped,
+        show: true,
         position: 'top' as const,
-        fontSize: 11,
+        fontSize: 10,
         formatter: (p: { value: number | null }) => (p.value === null ? '' : `${fmt(p.value, 2)}×`),
       },
       markLine:
@@ -173,11 +177,10 @@ export function overheadOption(
               symbol: 'none',
               data: [{ yAxis: 1 }],
               label: {
-                position: 'end',
-                formatter: '1.0× baseline',
+                formatter: '1× baseline',
                 fontSize: 10,
               },
-              lineStyle: { type: 'dashed' },
+              lineStyle: { type: 'dashed', width: 1 },
             }
           : undefined,
     };
@@ -200,7 +203,11 @@ export function overheadOption(
     legend: grouped ? bottomLegend(tasks.map(taskLabel)) : { show: false },
     grid: { left: 62, right: 26, top: 18, bottom: grouped ? 92 : 72 },
     xAxis: catAxis({ data: conditions, axisLabel: { ...axisLabelStyle(), rotate: 26 } }),
-    yAxis: valueAxis({ ...yName('× vs single_agent', 50), min: 0 }),
+    yAxis: valueAxis({
+      ...yName('× single agent', 50),
+      min: 0,
+      axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}×` },
+    }),
     series,
   } as unknown as EChartsOption;
 }
@@ -267,7 +274,7 @@ export function efficiencyOption(
       label: { show: false },
       itemStyle: {
         color: conditionColor(condition),
-        opacity: 0.82,
+        opacity: 0.85,
         borderColor: '#ffffff',
         borderWidth: 1,
       },
@@ -291,12 +298,13 @@ export function efficiencyOption(
         ].join('<br>');
       },
     },
-    legend: rightLegend(conditions),
-    grid: { left: 64, right: 152, top: 16, bottom: 50 },
+    legend: bottomLegend(conditions),
+    grid: { left: 64, right: 26, top: 16, bottom: 64 },
     // Positioning map: scale both axes to the data so the conditions spread out
-    // and relative cost/quality is legible, rather than crushed against a 0-origin.
-    xAxis: valueAxis({ ...xName('mean total cost ($)', 28), scale: true }),
-    yAxis: valueAxis({ ...yName(qualityAxisLabel(task), 56), scale: true }),
+    // and relative cost/quality is legible. Directional arrows on the axis names
+    // cue the reader that up-and-left is the sweet spot; cost is pinned to 0.
+    xAxis: valueAxis({ ...xName('mean total cost ($)  →', 28), scale: true, min: 0 }),
+    yAxis: valueAxis({ ...yName(`${qualityAxisLabel(task)}  ↑`, 56), scale: true }),
     series,
   } as unknown as EChartsOption;
 }

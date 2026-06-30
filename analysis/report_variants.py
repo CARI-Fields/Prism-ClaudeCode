@@ -80,7 +80,8 @@ VARIANTS: list[dict[str, Any]] = [
 ]
 
 
-def _read_prompt(task: str) -> str:
+def read_prompt(task: str) -> str:
+    """Return the task's prompt.md spec, or "" when no spec file exists."""
     path = TASKS_DIR / task / "prompt.md"
     try:
         return path.read_text(encoding="utf-8").strip()
@@ -108,7 +109,7 @@ def build_page(variant: dict[str, Any], runs: pd.DataFrame) -> dict[str, Any]:
             "title": meta["title"],
             "measures": meta["measures"],
             "source": f"experiment/tasks/{task}/prompt.md",
-            "prompt": _read_prompt(task) or "Prompt not found — this task's spec will appear once it is added under experiment/tasks/.",
+            "prompt": read_prompt(task) or "Prompt not found — this task's spec will appear once it is added under experiment/tasks/.",
             "has_data": _task_has_runs(runs, task, variant["conditions"]),
         })
     strategies = [{

@@ -88,7 +88,7 @@ export function Section3View() {
           group,
           AGENT_TYPE_ORDER,
         );
-        const barMaxWidth = Math.max(6, Math.round(6 + 74 * (density / 100)));
+        const barMaxWidth = Math.max(4, Math.round(4 + 26 * (density / 100)));
         // Denser bars pack tighter: gap shrinks as the bars widen (and vice-versa).
         const barCategoryGap = `${Math.round(60 - 52 * (density / 100))}%`;
         const bd = breakdownData(
@@ -105,17 +105,25 @@ export function Section3View() {
               </h2>
               <span className="run-tag">{run.run_id}</span>
             </div>
-            <h3 className="cache-sub">Per-Run Request Cost Timeline</h3>
+            <h3 className="cache-sub">Per-run request cost timeline</h3>
             <EChart
               className="chart"
               themeMode={mode}
               option={costTimelineOption(rowsForRun, ordered, barMaxWidth, barCategoryGap)}
             />
-            <h3 className="cache-sub">Context Source Breakdown</h3>
+            <h3 className="cache-sub">Context source breakdown</h3>
             <EChart
               className="chart tall"
               themeMode={mode}
-              option={contextOption(bd, ordered, hitrate, hitData, barMaxWidth, barCategoryGap)}
+              option={contextOption(
+                bd,
+                ordered,
+                hitrate,
+                hitData,
+                barMaxWidth,
+                barCategoryGap,
+                mode === 'dark',
+              )}
               onClick={
                 mdef.clickable
                   ? (p) => {

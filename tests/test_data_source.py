@@ -97,3 +97,45 @@ def test_app_startup_pulls_data_from_configured_dataset(monkeypatch, tmp_path):
     with TestClient(appmod.app):
         pass
     assert captured["args"] == (str(tmp_path), "acme/ds", "tok")
+
+
+def test_full_text_file_is_separate_from_startup_files():
+    from web.api.data_source import DATA_FILES, FULL_TEXT_FILE
+    assert FULL_TEXT_FILE == "component_texts_full.parquet"
+    assert FULL_TEXT_FILE not in DATA_FILES
+
+
+def test_ensure_full_texts_pulls_only_the_full_file(monkeypatch, tmp_path):
+    import web.api.data_source as ds
+    monkeypatch.setenv("HF_DATASET_REPO", "acme/ds")
+    monkeypatch.setenv("HF_ACCESS_TOKEN", "tok")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    seen = []
+
+    def fake_download(repo, filename, token, dest):
+        seen.append((repo, filename, token))
+        Path(dest).write_text("payload")
+
+    ds.ensure_full_texts(_download=fake_download)
+    assert [f for _, f, _ in seen] == [ds.FULL_TEXT_FILE]
+    assert all(repo == "acme/ds" and token == "tok" for repo, _, token in seen)
+
+
+def test_ensure_full_texts_noop_without_repo(monkeypatch, tmp_path):
+    import web.api.data_source as ds
+    monkeypatch.delenv("HF_DATASET_REPO", raising=False)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    calls = []
+    ds.ensure_full_texts(_download=lambda **k: calls.append(k))
+    assert calls == []
+
+
+def test_ensure_full_texts_skips_fetch_when_already_present(monkeypatch, tmp_path):
+    import web.api.data_source as ds
+    monkeypatch.setenv("HF_DATASET_REPO", "acme/ds")
+    monkeypatch.setenv("HF_ACCESS_TOKEN", "tok")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    (tmp_path / ds.FULL_TEXT_FILE).write_text("cached")
+    calls = []
+    ds.ensure_full_texts(_download=lambda **k: calls.append(k))
+    assert calls == []

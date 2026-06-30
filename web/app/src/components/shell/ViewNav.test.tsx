@@ -1,10 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppStateProvider } from '../../state/AppStateProvider';
 import { ViewNav } from './ViewNav';
 import { ViewCanvas } from './ViewCanvas';
 import type { Manifest } from '../../types';
+
+// ViewCanvas renders <ScopeNote>, which reads the data context; this test only
+// exercises view switching, so stub it out (no data → ScopeNote renders nothing).
+vi.mock('../../data/DataContext', () => ({ useData: () => ({ data: undefined }) }));
 
 const manifest: Manifest = {
   variants: [

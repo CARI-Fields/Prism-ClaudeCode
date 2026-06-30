@@ -1,0 +1,59 @@
+name: Deploy HF Space
+
+# Auto-deploy the report API *code* to the public HF Space (nasa718/prism-api)
+# whenever a merge to master changes the API build context. Data is NOT deployed
+# here — it lives in a private HF Dataset, pulled at Space startup.
+#
+# REQUIRES a repo Actions secret HF_ACCESS_TOKEN (an HF *write* token):
+#   GitHub → Settings → Secrets and variables → Actions → New repository secret.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'web/api/**'
+      - 'web/__init__.py'
+      - 'analysis/__init__.py'
+      - 'analysis/report_variants.py'
+      - 'experiment/tasks/**/prompt.md'
+      - 'scripts/stage_space.sh'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-space
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install "huggingface_hub>=0.25"
+      - name: Stage Space build context
+        run: bash scripts/stage_space.sh "$RUNNER_TEMP/space"
+      - name: Upload code to the HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+          tok = os.environ.get("HF_TOKEN")
+          if not tok:
+              raise SystemExit(
+                  "HF_ACCESS_TOKEN secret is not set — add it in "
+                  "repo Settings → Secrets and variables → Actions"
+              )
+          sha = os.environ.get("GITHUB_SHA", "")[:7]
+          HfApi(token=tok).upload_folder(
+              folder_path=os.path.join(os.environ["RUNNER_TEMP"], "space"),
+              repo_id="nasa718/prism-api",
+              repo_type="space",
+              commit_message=f"deploy: {sha} (auto from master)",
+              ignore_patterns=["__pycache__", "*.pyc"],
+          )
+          print("deployed nasa718/prism-api")
+          PY

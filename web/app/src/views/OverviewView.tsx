@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { Card, Elevation } from '@blueprintjs/core';
 import { useData } from '../data/DataContext';
 import { useFilter, useReport, useTheme } from '../state/AppStateProvider';
-import { computeKpis } from '../data/kpis';
 import { inVariantRuns, scopeRuns } from '../data/filters';
+import { taskLabel } from '../data/taskLabel';
 import { conditionColor } from '../theme';
 import { EChart } from '../components/EChart';
 import { matrixData } from '../charts/matrix';
@@ -25,37 +25,16 @@ export function OverviewView() {
   );
   if (!variant || !data) return null;
 
-  const k = computeKpis(scoped);
-  const fmt = (v: number | null, d = 2, u = '') => (v == null ? '—' : `${v.toFixed(d)}${u}`);
-  const cards = [
-    { label: 'Runs', value: String(k.runs) },
-    { label: 'Mean requests', value: fmt(k.meanRequests, 1) },
-    { label: 'Mean total cost', value: k.meanCost == null ? '—' : `$${k.meanCost.toFixed(3)}` },
-    { label: 'Mean quality', value: fmt(k.meanQuality, 2) },
-    {
-      label: 'Mean cache hit',
-      value: k.meanCacheHit == null ? '—' : `${(k.meanCacheHit * 100).toFixed(0)}%`,
-    },
-  ];
   const tasks = selTask.length ? selTask : variant.tasks;
   const reps = Array.from(new Set(scoped.map((r) => r.rep))).sort((a, b) => a - b);
   const matrix = matrixData(scoped, tasks, reps, variant.conditions);
+  const matrixPanel = mode === 'dark' ? '#1e242c' : '#ffffff';
 
   return (
     <div className="view view-overview">
-      <div className="kpi-row">
-        {cards.map((c) => (
-          <Card key={c.label} elevation={Elevation.ZERO} className="kpi-card">
-            <div className="kpi-label">{c.label}</div>
-            <div className="kpi-value">{c.value}</div>
-          </Card>
-        ))}
-      </div>
       <div className="overview-grid">
         <Card elevation={Elevation.ZERO} className="panel-card">
-          <h2 className="panel-title">
-            {data.manifest.task_meta[tasks[0]]?.title ?? variant.title}
-          </h2>
+          <h2 className="panel-title">{variant.title}</h2>
           <p className="panel-lede" dangerouslySetInnerHTML={{ __html: variant.lede }} />
           <ul className="strategy-legend">
             {variant.conditions.map((c) => (
@@ -68,8 +47,37 @@ export function OverviewView() {
         </Card>
         <Card elevation={Elevation.ZERO} className="panel-card">
           <h2 className="panel-title">Experiment matrix</h2>
-          <EChart className="chart" themeMode={mode} option={matrixOption(matrix)} />
+          <p className="panel-sub">
+            Run status for each task × feature cell — green passed, red failed, grey missing.
+          </p>
+          <EChart className="chart" themeMode={mode} option={matrixOption(matrix, matrixPanel)} />
         </Card>
+      </div>
+      <div className="task-briefs">
+        {variant.tasks.map((task) => {
+          const meta = data.manifest.task_meta[task];
+          const prompt = data.manifest.task_prompts?.[task] ?? '';
+          return (
+            <Card elevation={Elevation.ZERO} className="panel-card task-brief" key={task}>
+              <div className="task-brief-head">
+                <span className="task-brief-eyebrow">{taskLabel(task)}</span>
+                <h3 className="panel-title">{meta?.title ?? task}</h3>
+              </div>
+              <p className="panel-lede">{meta?.measures ?? ''}</p>
+              {prompt ? (
+                <details className="task-prompt">
+                  <summary>
+                    Prompt{' '}
+                    <span className="task-prompt-src">experiment/tasks/{task}/prompt.md</span>
+                  </summary>
+                  <pre>{prompt}</pre>
+                </details>
+              ) : (
+                <p className="task-prompt-empty">Full prompt spec not committed for this task.</p>
+              )}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

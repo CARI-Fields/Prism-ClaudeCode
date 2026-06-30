@@ -7,7 +7,15 @@ import type { Turn } from '../types';
 import type { CacheRow } from './cacheTimeline';
 import { promptTokens } from './cacheTimeline';
 import { REP_LINE_TYPES, REQUEST_TYPE_SYMBOLS, agentDotSpec } from './agentSymbols';
-import { baseTextStyle, TOOLTIP, valueAxis, xName, yName, rightLegend } from './echartsTheme';
+import {
+  baseTextStyle,
+  TOOLTIP,
+  valueAxis,
+  axisLabelStyle,
+  xName,
+  yName,
+  bottomLegend,
+} from './echartsTheme';
 import { conditionColor } from '../theme';
 import { fmt } from './format';
 
@@ -91,6 +99,7 @@ export function cacheOption(
         // shared legend name collapses runs of same condition
         name: g.condition,
         type: 'line' as const,
+        smooth: true,
         showSymbol: true,
         // main-agent = solid circle; each subagent = own shape; security-monitor = diamond
         symbol: REQUEST_TYPE_SYMBOLS[g.type] ?? 'circle',
@@ -124,11 +133,15 @@ export function cacheOption(
         );
       },
     },
-    legend: rightLegend(condsPresent),
-    grid: { left: 72, right: 230, top: 16, bottom: 62 },
-    xAxis: { type: 'value', name: 'Request # within selected run', min: 1 },
-    yAxis: valueAxis({ ...yName('prefix cache hit rate (%)', 52), min: 0, max: 100 }),
-    dataZoom: [{ type: 'inside' }, { type: 'slider', height: 20, bottom: 18 }],
+    legend: bottomLegend(condsPresent),
+    grid: { left: 10, right: 16, top: 26, bottom: 44, containLabel: true },
+    xAxis: { type: 'value', ...xName('request #', 28), min: 1 },
+    yAxis: valueAxis({
+      ...yName('hit rate', 46),
+      min: 0,
+      max: 100,
+      axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` },
+    }),
     series,
   } as unknown as EChartsOption;
 }
@@ -181,7 +194,7 @@ export function latencyOption(turns: Turn[], conditions: string[]): EChartsOptio
     name: condition,
     type: 'scatter' as const,
     data: byCondition.get(condition) ?? [],
-    itemStyle: { color: conditionColor(condition), opacity: 0.72 },
+    itemStyle: { color: conditionColor(condition), opacity: 0.55 },
   }));
 
   return {
@@ -202,11 +215,15 @@ export function latencyOption(turns: Turn[], conditions: string[]): EChartsOptio
         );
       },
     },
-    legend: rightLegend(conditions),
-    grid: { left: 64, right: 152, top: 16, bottom: 62 },
-    xAxis: valueAxis(xName('context length (tokens)', 30)),
-    yAxis: valueAxis({ ...yName('prefix cache hit rate (%)', 52), min: 0, max: 100 }),
-    dataZoom: [{ type: 'inside' }, { type: 'slider', height: 18, bottom: 20 }],
+    legend: bottomLegend(conditions),
+    grid: { left: 10, right: 16, top: 26, bottom: 44, containLabel: true },
+    xAxis: valueAxis({ ...xName('context length (tokens)', 36), scale: true }),
+    yAxis: valueAxis({
+      ...yName('hit rate', 46),
+      min: 0,
+      max: 100,
+      axisLabel: { ...axisLabelStyle(), formatter: (v: number) => `${v}%` },
+    }),
     series,
   } as unknown as EChartsOption;
 }

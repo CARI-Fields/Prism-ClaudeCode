@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from web.api import export, queries
 from web.api.auth import require_token
 from web.api.config import get_settings
-from web.api.data_source import ensure_data
+from web.api.data_source import ensure_data, ensure_full_texts
 
 
 @asynccontextmanager
@@ -73,10 +73,19 @@ def token_rates() -> dict:
 @app.get("/api/export", dependencies=_GATE)
 def export_zip(runs: str = Query(...), texts: int = Query(default=0)) -> Response:
     run_ids = [r for r in runs.split(",") if r]
+    if texts:
+        try:
+            ensure_full_texts()
+        except Exception as exc:  # noqa: BLE001 — readable error, not a raw HF stack
+            raise HTTPException(
+                status_code=503, detail="raw context text is temporarily unavailable"
+            ) from exc
     try:
         data = export.build_zip(run_ids, include_texts=bool(texts))
     except ValueError:
         raise HTTPException(status_code=400, detail="no valid run_ids")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return Response(
         content=data,

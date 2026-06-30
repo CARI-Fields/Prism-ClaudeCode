@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 from analysis.build_tables import build_run, build_all, cache_summary
 from analysis.parse.parse_tap import drop_empty_turns, tap_turns
+from analysis.parse.token_counts import TokenCounter, load_token_cache
 
 
 def test_drop_empty_turns_removes_aborted_responses_and_reindexes():
@@ -31,7 +32,7 @@ def _make_run(tmp):
 
 def test_build_run(tmp_path):
     d = _make_run(tmp_path)
-    turns, comps, run, comp_texts = build_run(d)
+    turns, comps, run, comp_texts, comp_texts_full = build_run(d)
     assert turns and all(t["condition"] == "single_agent" for t in turns)
     assert run["num_requests"] == len(turns)
     assert run["total_cache_read"] == sum(t["cache_read"] for t in turns)
@@ -40,6 +41,24 @@ def test_build_run(tmp_path):
     assert all("total_cost_usd" in turn for turn in turns)
     assert run["quality_score"] == 0.0
     assert comp_texts and all({"component", "text", "stable"} <= set(x) for x in comp_texts)
+    assert comp_texts_full and all(x["truncated"] is False for x in comp_texts_full)
+
+
+def test_build_run_threads_token_counter(tmp_path):
+    d = _make_run(tmp_path)
+    tc = TokenCounter(counter=lambda t: 1)  # exact count for every unique block
+    _, comps, _, _, _ = build_run(d, token_counter=tc)
+    assert tc.api_calls > 0          # the counter was actually consulted
+    assert len(tc.cache) > 0         # and unique blocks were memoized
+    assert comps                     # components still produced
+
+
+def test_build_all_shares_and_persists_token_cache(tmp_path):
+    _make_run(tmp_path)
+    out = tmp_path / "processed"
+    build_all(tmp_path / "data/raw", out, token_counter=TokenCounter(counter=lambda t: 2))
+    cache = load_token_cache(out / "token_cache.json")
+    assert cache and all(v == 2 for v in cache.values())
 
 
 def test_cache_summary_counts_warm_cache_as_observed():
@@ -80,8 +99,12 @@ def test_build_all_writes_parquet(tmp_path):
     out = tmp_path / "processed"
     counts = build_all(tmp_path / "data/raw", out)
     assert counts["runs"] == 1 and counts["turns"] > 0
+    assert counts["component_texts_full"] > 0
     df = pd.read_parquet(out / "turns.parquet")
     assert {"run_id", "condition", "cache_read", "ttft_s"}.issubset(df.columns)
+    full = pd.read_parquet(out / "component_texts_full.parquet")
+    assert not full.empty and not full["truncated"].any()
+    assert {"run_id", "component", "text", "stable", "truncated"}.issubset(full.columns)
 
 
 def test_build_run_adds_research_rubric_fields(tmp_path):
@@ -115,7 +138,7 @@ def test_build_run_adds_research_rubric_fields(tmp_path):
         )
     (d / "workspace" / "report.md").write_text("\n".join(sections))
 
-    _, _, run, _ = build_run(d)
+    _, _, run, _, _ = build_run(d)
 
     assert run["research_sections_present"] == 6
     assert run["research_exact_two_url_sections"] == 6

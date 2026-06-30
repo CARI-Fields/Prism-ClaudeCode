@@ -40,7 +40,7 @@ export function ContextTextPanel({
     return (
       <Card className="ctx-text-panel">
         <Callout intent="none" className="ctx-empty">
-          Click a stacked segment above to view the text captured for that context part.
+          Click a stacked segment above to inspect the captured prompt text for that source.
         </Callout>
       </Card>
     );

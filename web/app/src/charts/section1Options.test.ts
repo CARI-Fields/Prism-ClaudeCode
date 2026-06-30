@@ -32,7 +32,7 @@ const conds = ['single_agent', 'subagents'];
 
 describe('section1 option builders', () => {
   it('matrixOption is a heatmap with status-coded cells + STATUS_COLORS visualMap', () => {
-    const opt = matrixOption(matrixData(runs, ['coding'], [1], conds)) as any;
+    const opt = matrixOption(matrixData(runs, ['coding'], [1], conds), '#ffffff') as any;
     expect(opt.series[0].type).toBe('heatmap');
     expect(opt.visualMap.inRange.color).toEqual(['#eef1f5', '#e03131', '#2f9e44', '#adb5bd']);
     expect(opt.series[0].data).toHaveLength(2); // 1 row × 2 conds

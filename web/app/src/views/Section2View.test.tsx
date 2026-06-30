@@ -47,7 +47,7 @@ describe('Section2View', () => {
         <Section2View />
       </AppStateProvider>,
     );
-    expect(screen.getByText(/Prefix Cache Hit Rate/)).toBeInTheDocument();
+    expect(screen.getByText(/Prefix cache hit rate \(accumulated\)/)).toBeInTheDocument();
     expect(screen.getAllByTestId('chart')).toHaveLength(2);
   });
 });

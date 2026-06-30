@@ -2,10 +2,18 @@ import { echarts } from './echartsCore';
 
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 
-// `tooltipShadow` lifts the tooltip off the surface per-mode. The per-option
-// tooltips (see TOOLTIP in echartsTheme.ts) intentionally omit `extraCssText`
-// so this theme-level value wins and the drop-shadow renders on every chart.
-function theme(ink: string, muted: string, line: string, panel: string, tooltipShadow: string) {
+// Flat, hairline tooltip + solid splitlines (Foundry idiom — no elevation glow).
+// `split` is a dedicated, lighter gridline color so splitlines sit quieter than
+// the heavier axis `line`. `tipBg`/`tipBorder` match the design's tooltip tokens
+// (panel-2 surface, line-2 border) rather than the panel/line used elsewhere.
+function theme(
+  ink: string,
+  muted: string,
+  line: string,
+  split: string,
+  tipBg: string,
+  tipBorder: string,
+) {
   return {
     backgroundColor: 'transparent',
     textStyle: { fontFamily: MONO, color: ink },
@@ -17,34 +25,21 @@ function theme(ink: string, muted: string, line: string, panel: string, tooltipS
     },
     valueAxis: {
       axisLabel: { color: muted, fontFamily: MONO, fontSize: 11 },
-      splitLine: { lineStyle: { color: line, type: 'dashed' } },
+      splitLine: { lineStyle: { color: split } },
     },
     legend: { textStyle: { color: ink, fontFamily: MONO, fontSize: 11 } },
     tooltip: {
-      backgroundColor: panel,
-      borderColor: line,
+      backgroundColor: tipBg,
+      borderColor: tipBorder,
       borderWidth: 1,
       padding: [8, 11],
       textStyle: { color: ink, fontFamily: MONO, fontSize: 12 },
-      extraCssText: `border-radius:8px; box-shadow:${tooltipShadow};`,
     },
   };
 }
 
-export const REPORT_LIGHT = theme(
-  '#0d1320',
-  '#5b6573',
-  '#d7dde6',
-  '#ffffff',
-  '0 6px 20px rgba(13,19,32,0.16)',
-);
-export const REPORT_DARK = theme(
-  '#e6ecf4',
-  '#97a3b4',
-  '#313b47',
-  '#1e242c',
-  '0 10px 28px rgba(0,0,0,0.60)',
-);
+export const REPORT_LIGHT = theme('#0d1320', '#5b6573', '#d7dde6', '#e7ebf1', '#ffffff', '#d7dde6');
+export const REPORT_DARK = theme('#e6ecf4', '#97a3b4', '#313b47', '#2a323c', '#232a33', '#3d4753');
 
 export function reportThemeName(mode: 'light' | 'dark'): string {
   return mode === 'dark' ? 'report-dark' : 'report-light';

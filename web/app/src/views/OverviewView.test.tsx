@@ -11,6 +11,7 @@ const manifest: Manifest = {
   ],
   strategy_desc: { goal: 'Goal strategy' },
   task_meta: { coding: { title: 'Coding', measures: 'speed' } },
+  task_prompts: { coding: 'Write a fused kernel.' },
   available: [],
 };
 const runs: Run[] = [
@@ -33,14 +34,25 @@ vi.mock('../data/DataContext', () => ({
 }));
 
 describe('OverviewView', () => {
-  it('renders KPI cards, the strategy legend, and a headline chart', () => {
+  it('renders the strategy legend and a headline chart (KPIs live on §1, not here)', () => {
     render(
       <AppStateProvider manifest={manifest}>
         <OverviewView />
       </AppStateProvider>,
     );
-    expect(screen.getByText('Runs')).toBeInTheDocument();
+    expect(screen.queryByText('Runs')).not.toBeInTheDocument();
     expect(screen.getByText('Goal strategy')).toBeInTheDocument();
     expect(screen.getByTestId('chart')).toBeInTheDocument();
+  });
+
+  it('renders a task brief per task with its description and full prompt', () => {
+    render(
+      <AppStateProvider manifest={manifest}>
+        <OverviewView />
+      </AppStateProvider>,
+    );
+    expect(screen.getByText('Coding')).toBeInTheDocument(); // task title
+    expect(screen.getByText('speed')).toBeInTheDocument(); // what-it-measures
+    expect(screen.getByText('Write a fused kernel.')).toBeInTheDocument(); // full prompt
   });
 });
